@@ -1,0 +1,8 @@
+{
+  "task_id": "fixture-linear-103",
+  "summary": "Produce an allowed but incorrect implementation.",
+  "confidence": 0.7,
+  "operations": [
+    {"op": "write_file", "path": "src/math_ops.py", "content": "def add(a, b):\n    return 0\n"}
+  ]
+}

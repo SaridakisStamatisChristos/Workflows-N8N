@@ -1,0 +1,15 @@
+{
+  "name": "Agentic Engineering - Reviewed Campaign Orchestrator",
+  "nodes": [
+    {"parameters":{"inputSource":"workflowInputs","workflowInputs":{"values":[{"name":"task","type":"object"},{"name":"repo_context","type":"object"},{"name":"model","type":"string"}]}},"id":"o1","name":"Input","type":"n8n-nodes-base.executeWorkflowTrigger","typeVersion":1.1,"position":[-520,0]},
+    {"parameters":{"source":"database","workflowId":{"__rl":true,"mode":"id","value":"REPLACE_REVIEWED_CODING_CAMPAIGN_WORKFLOW_ID"},"mode":"once","workflowInputs":{"mappingMode":"defineBelow","value":{"task":"={{ $json.task }}","repo_context":"={{ $json.repo_context }}","model":"={{ $json.model }}"}},"options":{"waitForSubWorkflow":true}},"id":"o2","name":"Reviewed Coding Campaign","type":"n8n-nodes-base.executeWorkflow","typeVersion":1.2,"position":[-260,0]},
+    {"parameters":{"mode":"runOnceForEachItem","jsCode":"if($json.ok!==true||!$json.change_set) throw new Error('reviewed_campaign_not_publishable'); return [{json:{task:$json.task,change_set:$json.change_set,review:$json.advisory_review||null}}];"},"id":"o3","name":"Evidence Gate","type":"n8n-nodes-base.code","typeVersion":2,"position":[0,0]},
+    {"parameters":{"source":"database","workflowId":{"__rl":true,"mode":"id","value":"REPLACE_AGENT_CAMPAIGN_DISPATCH_WORKFLOW_ID"},"mode":"once","workflowInputs":{"mappingMode":"defineBelow","value":{"task":"={{ $json.task }}","change_set":"={{ $json.change_set }}"}},"options":{"waitForSubWorkflow":true}},"id":"o4","name":"Dispatch Verified Candidate","type":"n8n-nodes-base.executeWorkflow","typeVersion":1.2,"position":[260,0]}
+  ],
+  "connections": {"Input":{"main":[[{"node":"Reviewed Coding Campaign","type":"main","index":0}]]},"Reviewed Coding Campaign":{"main":[[{"node":"Evidence Gate","type":"main","index":0}]]},"Evidence Gate":{"main":[[{"node":"Dispatch Verified Candidate","type":"main","index":0}]]}},
+  "active": false,
+  "settings": {"executionOrder":"v1"},
+  "versionId": "1df4c926-ac17-4515-b663-d43c9c299f67",
+  "meta": {"templateCredsSetupCompleted":false},
+  "tags": []
+}
