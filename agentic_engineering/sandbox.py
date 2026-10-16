@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shlex
 import shutil
 import subprocess
 import tempfile
@@ -94,8 +93,9 @@ def run_command_local(workspace: Path, command: str, timeout: int) -> dict[str, 
         return {"command": command, "status": "failed", "exit_code": 124, "output": output, "duration_seconds": round(time.monotonic() - started, 3), "failure": "timeout"}
 
 
-def run_command_docker(workspace: Path, command: str, timeout: int, policy: dict[str, Any], image: str = "python:3.12-slim") -> dict[str, Any]:
+def run_command_docker(workspace: Path, command: str, timeout: int, policy: dict[str, Any], image: str | None = None) -> dict[str, Any]:
     sandbox = policy.get("sandbox", {})
+    image = image or str(sandbox.get("image", "python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1"))
     args = [
         "docker", "run", "--rm",
         "--network", "none",
@@ -140,6 +140,10 @@ def execute_campaign(
 ) -> tuple[dict[str, Any], Path | None]:
     task = normalize_task(task)
     change_set = validate_change_set(change_set, task["task_id"])
+    max_contract_chars = int(policy.get("sandbox", {}).get("max_change_set_chars", 60000))
+    contract_chars = len(json.dumps(task, ensure_ascii=False)) + len(json.dumps(change_set, ensure_ascii=False)) + len(task["task_id"])
+    if contract_chars > max_contract_chars:
+        raise ContractError(f"combined task/change-set contract exceeds dispatch budget ({contract_chars}>{max_contract_chars})")
     issue_decision = classify_issue(task, policy)
     if not issue_decision.allowed:
         raise ContractError("task policy denied campaign: " + "; ".join(issue_decision.reasons))
@@ -197,11 +201,14 @@ def execute_campaign(
                 {"name": "issue_policy", "status": "passed", "detail": issue_decision.as_dict()},
                 {"name": "planned_path_policy", "status": "passed"},
                 {"name": "actual_path_policy", "status": "passed", "detail": actual_decision.as_dict()},
-            ],
+            ] + ([{"name": "adversarial_model_review", "status": "passed", "detail": change_set.get("review_evidence")} ] if change_set.get("review_evidence") else []),
             "known_failures": known_failures,
             "risk_areas": list(actual_decision.reasons if actual_decision.requires_human_review else []),
             "sensitive_paths_touched": [p for p in actual if evaluate_paths([p], task, policy).requires_human_review],
-            "assumptions": ["verification commands came from trusted repository benchmark/configuration, not issue text or model output"],
+            "assumptions": [
+                "verification commands came from trusted repository benchmark/configuration, not issue text or model output",
+                "model adversarial review is advisory evidence only and cannot authorize writes",
+            ],
             "review_hotspots": actual,
             "agent_confidence": change_set.get("confidence"),
             "human_judgment_required": ["Review semantic correctness and scope before merging"] + (["Sensitive path review required"] if actual_decision.requires_human_review else []),

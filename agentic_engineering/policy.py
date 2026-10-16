@@ -28,7 +28,7 @@ def _norm_path(path: str) -> str:
         raise ValueError("path must not be empty")
     if candidate.startswith("/") or candidate == ".." or candidate.startswith("../") or "/../" in candidate:
         raise ValueError(f"path escapes repository: {path!r}")
-    return candidate.lstrip("./")
+    return candidate
 
 
 def _matches(path: str, patterns: Iterable[str]) -> bool:
