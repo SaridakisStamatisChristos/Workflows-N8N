@@ -163,3 +163,9 @@ The repository exports are structurally, contract, and pinned-runtime import val
 Start with `docs/IMPORT_ORDER.md`, then read `docs/AUTONOMOUS_SYSTEM.md`, `docs/ACTIONS.md`, `docs/SECURITY.md`, `docs/TESTING.md`, `docs/LIVE_SMOKE.md`, and `docs/AGENTIC_ENGINEERING.md`.
 
 No API keys, OAuth secrets, webhook secrets, passwords, or tokens are committed to this repository.
+
+## License
+
+Copyright © 2026 Stamatis-Christos Saridakis. All rights reserved.
+
+This repository is **proprietary source-available software and is not open source**. The source may be accessed, cloned, and executed only for the limited evaluation, technical review, security review, recruitment, and portfolio-assessment purposes described in [`LICENSE`](LICENSE). Production use, commercial use, redistribution, sublicensing, incorporation into another product or service, and derivative use require prior written permission from the copyright owner.
