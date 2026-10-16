@@ -6,6 +6,17 @@ from pathlib import Path
 from typing import Any
 
 
+_SNAPSHOT_IGNORED_PARTS = {
+    ".git",
+    ".home",
+    ".pnpm-store",
+    ".turbo",
+    "__pycache__",
+    "coverage",
+    "node_modules",
+}
+
+
 def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
@@ -17,7 +28,7 @@ def sha256_file(path: Path) -> str:
 def snapshot(root: Path) -> dict[str, str]:
     result: dict[str, str] = {}
     for path in sorted(root.rglob("*")):
-        if not path.is_file() or ".git" in path.parts or "__pycache__" in path.parts:
+        if not path.is_file() or any(part in _SNAPSHOT_IGNORED_PARTS for part in path.parts):
             continue
         rel = path.relative_to(root).as_posix()
         result[rel] = sha256_file(path)
