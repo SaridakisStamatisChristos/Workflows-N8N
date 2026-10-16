@@ -10,9 +10,9 @@ TMP="$(mktemp -d)"
 STATE="$TMP/state"
 IMPORTS="$TMP/imports"
 EXPORTS="$TMP/exports"
-KEY="n8n-workflows-smoke-encryption-key-2026"
+KEY="$(openssl rand -hex 32)"
 OWNER_EMAIL="smoke@example.invalid"
-OWNER_PASSWORD="SmokeOwner2026!"
+OWNER_PASSWORD="SmokeOwner$(openssl rand -hex 16)Aa1!"
 
 cleanup() {
   docker rm -f "$NAME" >/dev/null 2>&1 || true
