@@ -32,23 +32,30 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout trusted control plane
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
+          path: control-plane
+
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: Materialize dispatch contracts safely
+
+      - name: Materialize and authorize dispatch contracts
+        id: contract
         env:
           INPUT_TASK_ID: ${{ inputs.task_id }}
           TASK_JSON: ${{ inputs.task_json }}
           CHANGE_SET_JSON: ${{ inputs.change_set_json }}
         run: |
           python - <<'PY'
-          import json, os
+          import json, os, re
           from pathlib import Path
+
           temp = Path(os.environ['RUNNER_TEMP'])
+          workspace = Path(os.environ['GITHUB_WORKSPACE'])
           task = json.loads(os.environ['TASK_JSON'])
           change = json.loads(os.environ['CHANGE_SET_JSON'])
           task_id = os.environ['INPUT_TASK_ID']
@@ -57,19 +64,109 @@ jobs:
           payload_chars = len(os.environ['TASK_JSON']) + len(os.environ['CHANGE_SET_JSON']) + len(task_id)
           if payload_chars > 60000:
               raise SystemExit('workflow-dispatch contract exceeds 60000-character safety budget')
+
+          repository = str(task.get('repository', ''))
+          if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository):
+              raise SystemExit('task repository must be a canonical owner/name value')
+          policy = json.loads((workspace / 'control-plane/.agent/policy.yaml').read_text(encoding='utf-8'))
+          allowlist = set(policy.get('repositories', {}).get('allowlist', []))
+          if repository not in allowlist:
+              raise SystemExit(f'target repository is not allowlisted: {repository}')
+
+          base_ref = str(task.get('base_ref', 'main'))
+          if base_ref != 'main':
+              raise SystemExit('Only main is an approved base ref')
+          profile = str(task.get('verification_profile', ''))
+          if not profile:
+              raise SystemExit('verification_profile is required')
+
           (temp / 'agent-task.json').write_text(json.dumps(task), encoding='utf-8')
           (temp / 'agent-change-set.json').write_text(json.dumps(change), encoding='utf-8')
+          out = Path(os.environ['GITHUB_OUTPUT'])
+          with out.open('a', encoding='utf-8') as fh:
+              fh.write(f'repository={repository}\n')
+              fh.write(f'base_ref={base_ref}\n')
+              fh.write(f'verification_profile={profile}\n')
+              fh.write('is_relayforge=' + ('true' if repository == 'SaridakisStamatisChristos/RelayForge' else 'false') + '\n')
           PY
-      - name: Execute verified change-set in Docker sandbox
+
+      - name: Require scoped cross-repository credential
+        if: steps.contract.outputs.is_relayforge == 'true'
+        env:
+          TARGET_TOKEN: ${{ secrets.RELAYFORGE_GITHUB_TOKEN }}
         run: |
+          test -n "$TARGET_TOKEN" || {
+            echo "RELAYFORGE_GITHUB_TOKEN is required for RelayForge publication." >&2
+            exit 1
+          }
+
+      - name: Checkout authorized target repository
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ steps.contract.outputs.repository }}
+          ref: ${{ steps.contract.outputs.base_ref }}
+          fetch-depth: 0
+          path: target
+          token: ${{ steps.contract.outputs.is_relayforge == 'true' && secrets.RELAYFORGE_GITHUB_TOKEN || github.token }}
+          persist-credentials: true
+
+      - name: Set up RelayForge pnpm
+        if: steps.contract.outputs.is_relayforge == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+          run_install: false
+
+      - name: Set up RelayForge Node toolchain
+        if: steps.contract.outputs.is_relayforge == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: target/pnpm-lock.yaml
+
+      - name: Prewarm RelayForge dependencies outside the model sandbox
+        if: steps.contract.outputs.is_relayforge == 'true'
+        working-directory: target
+        run: pnpm install --frozen-lockfile
+
+      - name: Build trusted networkless RelayForge verifier image
+        if: steps.contract.outputs.is_relayforge == 'true'
+        working-directory: control-plane
+        run: |
+          docker build \
+            -f docker/relayforge-verifier.Dockerfile \
+            -t relayforge-verifier:node22-pnpm10 .
+
+      - name: Execute verified change-set in Docker sandbox
+        env:
+          IS_RELAYFORGE: ${{ steps.contract.outputs.is_relayforge }}
+        run: |
+          set -euo pipefail
+          VERIFICATION_CONFIG="$GITHUB_WORKSPACE/control-plane/.agent/verification.yaml"
+          SANDBOX_ARGS=()
+          if [ "$IS_RELAYFORGE" = "true" ]; then
+            VERIFICATION_CONFIG="$GITHUB_WORKSPACE/target/.agent/verification.yaml"
+            SANDBOX_ARGS=(
+              --sandbox-image relayforge-verifier:node22-pnpm10
+              --sandbox-cap-add CHOWN
+              --sandbox-cap-add SETUID
+              --sandbox-cap-add SETGID
+            )
+          fi
+          cd "$GITHUB_WORKSPACE/control-plane"
           python -m agentic_engineering.campaign \
-            --source "$GITHUB_WORKSPACE" \
+            --source "$GITHUB_WORKSPACE/target" \
             --task "$RUNNER_TEMP/agent-task.json" \
             --change-set "$RUNNER_TEMP/agent-change-set.json" \
+            --policy "$GITHUB_WORKSPACE/control-plane/.agent/policy.yaml" \
+            --verification-config "$VERIFICATION_CONFIG" \
             --mode docker \
+            "${SANDBOX_ARGS[@]}" \
             --artifact-dir "$RUNNER_TEMP/agent-artifacts" \
             --materialize-dir "$RUNNER_TEMP/verified-tree" \
             --apply-verified-to-source
+
       - name: Read trusted campaign metadata
         id: meta
         run: |
@@ -83,12 +180,15 @@ jobs:
               f.write(f"base_ref={m['base_ref']}\n")
               f.write(f"pr_title={m['pr_title']}\n")
           PY
+
       - name: Assert base branch policy
         env:
           BASE_REF: ${{ steps.meta.outputs.base_ref }}
         run: |
           test "$BASE_REF" = "main" || { echo "Only main is an approved base ref"; exit 1; }
-      - name: Commit verified tree to isolated branch
+
+      - name: Commit verified tree to isolated target branch
+        working-directory: target
         env:
           BRANCH_FRAGMENT: ${{ steps.meta.outputs.branch_fragment }}
         run: |
@@ -105,17 +205,22 @@ jobs:
           git commit -m "agent: verified ${BRANCH_FRAGMENT}"
           git push origin "$BRANCH"
           echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
-      - name: Create draft PR only
+
+      - name: Create draft PR only in target repository
+        working-directory: target
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.contract.outputs.is_relayforge == 'true' && secrets.RELAYFORGE_GITHUB_TOKEN || github.token }}
           PR_TITLE: ${{ steps.meta.outputs.pr_title }}
+          TARGET_REPOSITORY: ${{ steps.contract.outputs.repository }}
         run: |
           gh pr create \
+            --repo "$TARGET_REPOSITORY" \
             --draft \
             --base main \
             --head "$BRANCH" \
             --title "$PR_TITLE" \
             --body-file "$RUNNER_TEMP/agent-artifacts/pr-body.md"
+
       - name: Upload campaign evidence
         if: always()
         uses: actions/upload-artifact@v7

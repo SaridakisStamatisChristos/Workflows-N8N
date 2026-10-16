@@ -7,7 +7,10 @@
     "allow_merge": false
   },
   "repositories": {
-    "allowlist": ["SaridakisStamatisChristos/Workflows-N8N"]
+    "allowlist": [
+      "SaridakisStamatisChristos/Workflows-N8N",
+      "SaridakisStamatisChristos/RelayForge"
+    ]
   },
   "sensitive_terms": {
     "blocked": ["production secret", "deployment credential", "rotate secret", "delete production data"],
@@ -29,8 +32,8 @@
     {"pattern": "**/billing/**", "risk": "critical", "agent_write": false, "reason": "billing surface"},
     {"pattern": "**/permissions/**", "risk": "high", "agent_write": "review_required", "reason": "authorization surface"},
     {"pattern": "auth/**", "risk": "critical", "agent_write": false, "reason": "root authentication surface"},
-    {"pattern": "billing/**", "risk": "critical", "agent_write": false, "reason": "root billing surface"},
-    {"pattern": "permissions/**", "risk": "high", "agent_write": "review_required", "reason": "root authorization surface"}
+    {"pattern": "billing/**", "risk": "critical", "agent_write": false, "reason": "billing surface"},
+    {"pattern": "permissions/**", "risk": "high", "agent_write": "review_required", "reason": "authorization surface"}
   ],
   "sandbox": {
     "max_files_changed": 40,

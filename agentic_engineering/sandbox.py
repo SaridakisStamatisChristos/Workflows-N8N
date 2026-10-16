@@ -16,6 +16,9 @@ from .io import load_jsonish
 from .policy import classify_issue, evaluate_paths
 
 
+_ALLOWED_BOOTSTRAP_CAPABILITIES = {"CHOWN", "SETGID", "SETUID"}
+
+
 def _safe_target(root: Path, rel: str) -> Path:
     rel = rel.replace('\\', '/')
     if rel.startswith('/') or '..' in Path(rel).parts:
@@ -96,10 +99,18 @@ def run_command_local(workspace: Path, command: str, timeout: int) -> dict[str, 
 def run_command_docker(workspace: Path, command: str, timeout: int, policy: dict[str, Any], image: str | None = None) -> dict[str, Any]:
     sandbox = policy.get("sandbox", {})
     image = image or str(sandbox.get("image", "python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1"))
+    cap_add = [str(value).upper() for value in sandbox.get("cap_add", [])]
+    unsupported = sorted(set(cap_add) - _ALLOWED_BOOTSTRAP_CAPABILITIES)
+    if unsupported:
+        raise ContractError("unsupported sandbox bootstrap capabilities: " + ", ".join(unsupported))
     args = [
         "docker", "run", "--rm",
         "--network", "none",
         "--cap-drop", "ALL",
+    ]
+    for capability in cap_add:
+        args.extend(["--cap-add", capability])
+    args.extend([
         "--security-opt", "no-new-privileges",
         "--pids-limit", str(sandbox.get("pids_limit", 128)),
         "--memory", str(sandbox.get("memory", "768m")),
@@ -111,7 +122,7 @@ def run_command_docker(workspace: Path, command: str, timeout: int, policy: dict
         "-e", "PYTHONDONTWRITEBYTECODE=1",
         image,
         "sh", "-lc", command,
-    ]
+    ])
     started = time.monotonic()
     try:
         proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout, check=False)
@@ -121,11 +132,11 @@ def run_command_docker(workspace: Path, command: str, timeout: int, policy: dict
             "exit_code": proc.returncode,
             "output": proc.stdout[-12000:],
             "duration_seconds": round(time.monotonic() - started, 3),
-            "sandbox": {"mode": "docker", "image": image, "network": "none"},
+            "sandbox": {"mode": "docker", "image": image, "network": "none", "bootstrap_capabilities": cap_add},
         }
     except subprocess.TimeoutExpired as exc:
         output = exc.stdout[-12000:] if isinstance(exc.stdout, str) else ""
-        return {"command": command, "status": "failed", "exit_code": 124, "output": output, "duration_seconds": round(time.monotonic() - started, 3), "failure": "timeout", "sandbox": {"mode": "docker", "image": image, "network": "none"}}
+        return {"command": command, "status": "failed", "exit_code": 124, "output": output, "duration_seconds": round(time.monotonic() - started, 3), "failure": "timeout", "sandbox": {"mode": "docker", "image": image, "network": "none", "bootstrap_capabilities": cap_add}}
 
 
 def execute_campaign(

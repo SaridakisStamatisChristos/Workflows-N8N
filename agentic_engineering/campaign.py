@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import re
 import shutil
@@ -24,6 +25,14 @@ def main() -> int:
     parser.add_argument("--change-set", required=True)
     parser.add_argument("--policy", default=".agent/policy.yaml")
     parser.add_argument("--verification-config", default=".agent/verification.yaml")
+    parser.add_argument("--sandbox-image")
+    parser.add_argument(
+        "--sandbox-cap-add",
+        action="append",
+        choices=["CHOWN", "SETGID", "SETUID"],
+        default=[],
+        help="Trusted workflow-only bootstrap capability for a custom verifier image",
+    )
     parser.add_argument("--mode", choices=["local", "docker"], default="docker")
     parser.add_argument("--artifact-dir", default="artifacts/agentic-campaign")
     parser.add_argument("--materialize-dir", default="artifacts/verified-tree")
@@ -37,6 +46,15 @@ def main() -> int:
     task["authorization"]["human_review_granted"] = False
     change_set = load_jsonish(args.change_set)
     policy = load_jsonish(args.policy)
+    if args.sandbox_image or args.sandbox_cap_add:
+        # Runtime selection and bootstrap capabilities are controlled only by the trusted workflow invocation,
+        # never by issue/model text.
+        policy = copy.deepcopy(policy)
+        sandbox = policy.setdefault("sandbox", {})
+        if args.sandbox_image:
+            sandbox["image"] = str(args.sandbox_image)
+        if args.sandbox_cap_add:
+            sandbox["cap_add"] = list(args.sandbox_cap_add)
     verification = load_jsonish(args.verification_config)
     profile = task.get("verification_profile")
     commands = verification.get("profiles", {}).get(profile)
