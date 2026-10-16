@@ -110,6 +110,13 @@ jobs:
           token: ${{ steps.contract.outputs.is_relayforge == 'true' && secrets.RELAYFORGE_GITHUB_TOKEN || github.token }}
           persist-credentials: true
 
+      - name: Set up RelayForge pnpm
+        if: steps.contract.outputs.is_relayforge == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+          run_install: false
+
       - name: Set up RelayForge Node toolchain
         if: steps.contract.outputs.is_relayforge == 'true'
         uses: actions/setup-node@v7
@@ -117,13 +124,6 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: target/pnpm-lock.yaml
-
-      - name: Set up RelayForge pnpm
-        if: steps.contract.outputs.is_relayforge == 'true'
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.18.3
-          run_install: false
 
       - name: Prewarm RelayForge dependencies outside the model sandbox
         if: steps.contract.outputs.is_relayforge == 'true'
