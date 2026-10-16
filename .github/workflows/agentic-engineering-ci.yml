@@ -1,0 +1,36 @@
+name: Agentic engineering verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  agentic-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Compile agentic platform code
+        run: python -m compileall -q agentic_engineering tests
+      - name: Unit and negative tests
+        run: python -m unittest discover -s tests -p 'test_agentic_*.py' -v
+      - name: Docker isolation pilot
+        run: python -m agentic_engineering.pilot --mode docker --out artifacts/pilot-evidence.json
+      - name: Generate evaluation report
+        run: |
+          python -m agentic_engineering.evaluate artifacts/pilot-evidence.json \
+            --json-out artifacts/evaluation-summary.json \
+            --md-out artifacts/evaluation-report.md
+      - name: Upload evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: agentic-engineering-evidence
+          path: artifacts/
+          if-no-files-found: error
