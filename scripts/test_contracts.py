@@ -60,6 +60,40 @@ else:
     if "Restore Claimed Action" not in key_expr or "action_key" not in key_expr:
         errors.append("dispatcher completion must use original claimed action_key")
 
+# Action idempotency is scoped to the exact normalized payload, not only request_id + action_type.
+validate_action = node_by_name(dispatcher, "Validate Approved Action")
+validate_js = (validate_action or {}).get("parameters", {}).get("jsCode", "")
+if "action_fingerprint" not in validate_js or "action_key" not in validate_js:
+    errors.append("dispatcher must derive a payload-sensitive action idempotency key")
+
+# Every external action branch must send sub-workflow errors to the shared ledger failure handler.
+action_nodes = (
+    "Gmail Send","Calendar Create","Drive Create Text","Telegram Notify",
+    "Slack Notify","Discord Notify","GitHub Write",
+)
+for name in action_nodes:
+    node = node_by_name(dispatcher, name)
+    if not node:
+        errors.append(f"dispatcher missing action node {name}")
+        continue
+    if node.get("onError") != "continueErrorOutput":
+        errors.append(f"dispatcher action node {name} must expose an error output")
+    main = dispatcher.get("connections", {}).get(name, {}).get("main", [])
+    if len(main) < 2 or not main[1] or main[1][0].get("node") != "Build Failure Record":
+        errors.append(f"dispatcher action node {name} error output must feed Build Failure Record")
+
+mark_failed = node_by_name(dispatcher, "Mark Action Failed")
+if not mark_failed:
+    errors.append("dispatcher missing failure ledger write")
+else:
+    fail_params = json.dumps(mark_failed.get("parameters", {}))
+    if '"operation": "fail"' not in fail_params or "action_key" not in fail_params:
+        errors.append("dispatcher failure path must mark the original action_key failed")
+
+surface_failure = node_by_name(dispatcher, "Surface Action Failure")
+if not surface_failure or "throw new Error" not in surface_failure.get("parameters", {}).get("jsCode", ""):
+    errors.append("dispatcher must surface failed side effects as a failed n8n execution")
+
 gh_http = [n for n in gh.get("nodes", []) if n.get("type") == "n8n-nodes-base.httpRequest"]
 if len(gh_http) != 4:
     errors.append("GitHub write adapter must expose exactly four fixed HTTP operations")
@@ -89,6 +123,14 @@ if input_names(pgmem) != {"operation","request_id","key","value","limit"}:
     errors.append("Postgres memory store does not preserve memory workflow input contract")
 if input_names(pgledger) != {"operation","key","value"}:
     errors.append("Postgres action ledger does not preserve ledger input contract")
+
+recent = node_by_name(pgmem, "Recent Events")
+recent_query = (recent or {}).get("parameters", {}).get("query", "")
+recent_repl = (recent or {}).get("parameters", {}).get("options", {}).get("queryReplacement", "")
+if "request_id = $1" not in recent_query or "LIMIT $2" not in recent_query:
+    errors.append("recent memory reads must scope by request_id when one is supplied")
+if "request_id" not in recent_repl or "limit" not in recent_repl:
+    errors.append("recent memory read must bind request_id and limit separately")
 
 # Deliberation is a review-only module: exactly two model calls, both pinned to OpenAI Responses,
 # and no provider write nodes or sub-workflow side-effect dispatch.
