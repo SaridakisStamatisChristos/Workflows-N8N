@@ -7,7 +7,7 @@ if [ -z "$PG_BINDIR" ] || [ ! -x "$PG_BINDIR/initdb" ]; then
   exit 70
 fi
 
-mkdir -p /tmp/pgdata /tmp/pgsocket /tmp/pg-home /tmp/home /tmp/cache /tmp/pnpm-home /tmp/corepack
+mkdir -p /tmp/pgdata /tmp/pgsocket /tmp/pg-home /tmp/home /tmp/cache
 chown -R postgres:postgres /tmp/pgdata /tmp/pgsocket /tmp/pg-home
 
 if [ ! -s /tmp/pgdata/PG_VERSION ]; then
@@ -25,8 +25,6 @@ export PGUSER=postgres
 export PGDATABASE=relayforge
 export HOME=/tmp/home
 export XDG_CACHE_HOME=/tmp/cache
-export PNPM_HOME=/tmp/pnpm-home
-export COREPACK_HOME=/tmp/corepack
 export CI=true
 
 exec "$@"
