@@ -17,6 +17,7 @@ A compositional control plane with:
 - bounded memory and interchangeable persistence backends;
 - AI routing into independent research, engineering, communications, GitHub, and general specialists;
 - OpenAI Responses API + current-web research;
+- optional adversarial-specialist + independent-arbiter deliberation for hard/high-stakes work;
 - deterministic risk and human-approval policy;
 - idempotent approved-action execution;
 - Gmail, Google Calendar, Google Drive, Telegram, Slack, Discord, and GitHub write adapters;
@@ -25,7 +26,7 @@ A compositional control plane with:
 - scheduled autonomous read-only briefs;
 - dependency health checks and Postgres operations metrics;
 - centralized error capture and bounded recovery advice;
-- structural, safety, and contract CI.
+- structural, safety, cross-workflow, and real-n8n import/boot CI.
 
 ## Repository layout
 
@@ -74,19 +75,27 @@ Use Postgres for multi-worker, restart-resistant, or higher-volume deployments.
 - Slack: native Slack Trigger; configure a Slack signing secret and explicit user/channel allowlists.
 - Discord: n8n has no native Discord Trigger, so the repository uses a Header-Auth relay contract. The upstream relay must verify Discord's request signature before forwarding a normalized event.
 
-## Validation
+## Verification
+
+Fast checks:
 
 ```bash
 python scripts/validate_workflows.py
 python scripts/test_contracts.py
 ```
 
-The same checks run in GitHub Actions on every push to `main` and every pull request.
+Real n8n import/boot round-trip:
+
+```bash
+bash scripts/live_n8n_smoke.sh
+```
+
+The live harness is pinned to n8n `2.43.6` and GitHub Actions runs it on workflow changes. See `docs/LIVE_SMOKE.md`.
 
 ## Deployment status
 
-The repository exports are structurally and contract validated. They still require instance-specific n8n workflow-ID bindings, credentials, allowlists, URLs, and runtime smoke tests before production publication.
+The repository exports are structurally, contract, and pinned-runtime import validated once the CI checks are green. They still require instance-specific workflow-ID bindings, credentials, allowlists, URLs, and credentialed provider smoke tests before production publication.
 
-Start with `docs/IMPORT_ORDER.md`, then read `docs/AUTONOMOUS_SYSTEM.md`, `docs/ACTIONS.md`, `docs/SECURITY.md`, and `docs/TESTING.md`.
+Start with `docs/IMPORT_ORDER.md`, then read `docs/AUTONOMOUS_SYSTEM.md`, `docs/ACTIONS.md`, `docs/SECURITY.md`, `docs/TESTING.md`, and `docs/LIVE_SMOKE.md`.
 
 No API keys, OAuth secrets, webhook secrets, passwords, or tokens are committed to this repository.

@@ -1,0 +1,29 @@
+name: Live n8n import smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'workflows/**'
+      - 'scripts/live_n8n_smoke.sh'
+      - '.github/workflows/live-n8n-smoke.yml'
+  pull_request:
+    paths:
+      - 'workflows/**'
+      - 'scripts/live_n8n_smoke.sh'
+      - '.github/workflows/live-n8n-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  import-roundtrip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run live n8n import/boot smoke
+        env:
+          N8N_VERSION: '2.43.6'
+        run: bash scripts/live_n8n_smoke.sh

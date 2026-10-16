@@ -30,6 +30,7 @@ ACTIONS = {
 }
 
 cc = load("workflows/autonomous/00-autonomous-command-center.json")
+deliberation = load("workflows/autonomous/40-deliberation-review.json")
 dispatcher = load("workflows/actions/50-approved-action-dispatcher.json")
 gh = load("workflows/actions/57-github-write-approved.json")
 slack = load("workflows/operators/61-slack-command-gateway.json")
@@ -66,6 +67,8 @@ for n in gh_http:
     url = str(n.get("parameters", {}).get("url", ""))
     if not url.startswith("=https://api.github.com/repos/"):
         errors.append(f"GitHub write node {n.get('name')} must be pinned to api.github.com/repos")
+    if n.get("retryOnFail") is True:
+        errors.append(f"GitHub non-idempotent write node {n.get('name')} must not auto-retry")
 
 slack_trigger = next((n for n in slack.get("nodes", []) if n.get("type") == "n8n-nodes-base.slackTrigger"), None)
 if not slack_trigger:
@@ -86,6 +89,26 @@ if input_names(pgmem) != {"operation","request_id","key","value","limit"}:
     errors.append("Postgres memory store does not preserve memory workflow input contract")
 if input_names(pgledger) != {"operation","key","value"}:
     errors.append("Postgres action ledger does not preserve ledger input contract")
+
+# Deliberation is a review-only module: exactly two model calls, both pinned to OpenAI Responses,
+# and no provider write nodes or sub-workflow side-effect dispatch.
+deliberation_http = [n for n in deliberation.get("nodes", []) if n.get("type") == "n8n-nodes-base.httpRequest"]
+if len(deliberation_http) != 2:
+    errors.append("deliberation review must contain exactly two model HTTP calls")
+for n in deliberation_http:
+    if n.get("parameters", {}).get("url") != "https://api.openai.com/v1/responses":
+        errors.append(f"deliberation HTTP node {n.get('name')} is not pinned to OpenAI Responses")
+write_types = {
+    "n8n-nodes-base.gmail","n8n-nodes-base.googleCalendar","n8n-nodes-base.googleDrive",
+    "n8n-nodes-base.telegram","n8n-nodes-base.slack","n8n-nodes-base.discord",
+    "n8n-nodes-base.github","n8n-nodes-base.postgres","n8n-nodes-base.executeWorkflow",
+}
+for n in deliberation.get("nodes", []):
+    if n.get("type") in write_types:
+        errors.append(f"deliberation review contains side-effect-capable node {n.get('name')}")
+
+if input_names(deliberation) != {"request_id","task","context","candidate","model"}:
+    errors.append("deliberation review input contract drifted")
 
 daily_text = json.dumps(daily).lower()
 if '"action"' in daily_text and "requested action" not in daily_text:

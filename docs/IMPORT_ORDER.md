@@ -23,6 +23,12 @@ Both variants preserve the same sub-workflow input contracts. Bind Postgres cred
 7. `workflows/autonomous/90-error-handler.json`
 8. `workflows/autonomous/91-recovery-advisor.json`
 
+Optional high-rigor review layer:
+
+- `workflows/autonomous/40-deliberation-review.json`
+
+It is not wired into every request by default. Feed it `request_id`, `task`, `context`, the primary `candidate` object, and `model` after a specialist when adversarial review + independent arbitration justify two additional model calls.
+
 ## 3. Import write adapters
 
 9. `workflows/actions/51-gmail-send-approved.json`
@@ -69,7 +75,7 @@ They are separate inbound trust boundaries.
 
 ## 5. Assign credentials
 
-- OpenAI router/specialists/health: HTTP Bearer Auth containing the OpenAI API key.
+- OpenAI router/specialists/deliberation/health: HTTP Bearer Auth containing the OpenAI API key.
 - GitHub read-only specialist: least-privilege GitHub read token.
 - GitHub approved write adapter: separate least-privilege GitHub write token.
 - Gmail action: Gmail OAuth2.
@@ -102,13 +108,19 @@ The schedule uses the n8n workflow/instance timezone. Adjust the 08:00 rule to y
 
 ## 8. Verify before publish
 
-Run:
+Run fast checks:
 
 ```bash
 python scripts/validate_workflows.py
 python scripts/test_contracts.py
 ```
 
-Then perform the runtime smoke matrix in `docs/TESTING.md`.
+Then run the pinned real-n8n round-trip:
 
-Only after smoke tests pass should you publish the command center, operator gateways, schedules, and observability webhooks.
+```bash
+bash scripts/live_n8n_smoke.sh
+```
+
+Finally perform the credentialed runtime smoke matrix in `docs/TESTING.md`.
+
+Only after those checks should you publish the command center, operator gateways, schedules, and observability webhooks.

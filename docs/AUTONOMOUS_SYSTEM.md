@@ -27,6 +27,15 @@ Authenticated Command Webhook
 - GitHub read-only: repository metadata/file analysis without mutation.
 - General fallback: bounded response when no specialist route is appropriate.
 
+## Optional deliberation review
+
+`workflows/autonomous/40-deliberation-review.json` adds a bounded review layer for hard or high-stakes analyses. It consumes the original task/context plus a primary specialist candidate, then runs:
+
+1. an adversarial specialist that searches for unsupported claims, hidden risks, contradictions, and missing evidence;
+2. an independent arbiter that synthesizes the primary candidate and critique into a final defensible result.
+
+The module contains no provider write nodes and no sub-workflow action dispatch. It is intentionally **not** wired into every command-center request because it adds two high-effort model calls. Insert it after a primary specialist and before the deterministic policy gate when the extra review cost is justified.
+
 ## Persistence backends
 
 The command center and dispatcher refer only to workflow contracts, not storage implementation details.
@@ -66,6 +75,11 @@ The metrics endpoint is authenticated because operational state is not intended 
 
 The error handler captures failures. The recovery advisor may classify retryability and recommend repair, but it does not silently mutate workflows or replay non-idempotent provider actions.
 
-## Deployment claim
+## Verification layers
 
-Repository CI validates structure, safety invariants, and cross-workflow contracts. It does not prove that a particular n8n instance has the right credentials, provider permissions, workflow IDs, network access, or runtime node versions. Production readiness therefore requires the smoke tests in `docs/TESTING.md`.
+1. `validate_workflows.py` checks structure and local safety invariants.
+2. `test_contracts.py` checks cross-workflow platform contracts.
+3. `live_n8n_smoke.sh` imports/exports the full workflow set through a real pinned n8n container and verifies restart readiness.
+4. credentialed smoke tests validate provider-specific behavior on the target deployment.
+
+Repository checks provide evidence that the exports are structurally coherent and importable on the pinned n8n version. They do not prove that a particular deployment has correct credentials, permissions, network access, or provider configuration.
