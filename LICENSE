@@ -1,0 +1,64 @@
+PROPRIETARY SOURCE-AVAILABLE LICENSE
+
+Copyright (c) 2026 Stamatis-Christos Saridakis. All rights reserved.
+
+1. Ownership
+
+This repository and the original source code, workflow definitions, documentation, schemas, tests, configuration, designs, and other materials contained in it (collectively, the "Software") are proprietary works owned by Stamatis-Christos Saridakis, except for third-party materials that are separately identified or governed by their own licenses.
+
+The Software is made publicly visible for evaluation, portfolio review, technical inspection, and demonstration purposes. Public availability of the source code does not make the Software open source and does not waive any copyright or other intellectual-property rights.
+
+2. Limited Evaluation Permission
+
+Subject to this License, you are granted a limited, non-exclusive, non-transferable, revocable permission to access, download, clone, and execute the Software solely for personal or internal evaluation, technical review, security review, recruitment or portfolio assessment, or other non-production inspection purposes.
+
+This limited permission does not transfer ownership and does not grant any right to exploit the Software commercially or operationally.
+
+3. Restrictions
+
+Except with prior written permission from the copyright owner, you may not:
+
+(a) use the Software, in whole or in part, in production or to provide a product or service;
+(b) copy or reproduce the Software except as reasonably necessary for the limited evaluation permission above;
+(c) modify, adapt, translate, or create derivative works from the Software for use outside the limited evaluation permission above;
+(d) distribute, publish, sublicense, sell, rent, lease, transfer, or otherwise make the Software or derivative works available to any third party;
+(e) incorporate the Software or any substantial portion of it into another software product, workflow collection, hosted service, commercial offering, or internal production system;
+(f) remove, obscure, or alter copyright, ownership, attribution, or proprietary notices;
+(g) represent that the Software is open-source software or that you have rights in it beyond those expressly granted by this License; or
+(h) use the Software in a manner that would require relicensing or disclosure of the Software under another license.
+
+4. GitHub Platform Rights
+
+Nothing in this License is intended to restrict rights that must be granted to GitHub or to other GitHub users solely as required by the GitHub Terms of Service for hosting, displaying, accessing, or using repository-platform features. Any such platform rights do not create a broader license to use, modify, distribute, commercialize, or deploy the Software outside those required platform functions.
+
+5. Third-Party Materials
+
+Third-party software, libraries, services, trademarks, APIs, workflow nodes, or other materials referenced or used by the Software remain subject to their respective owners' terms and licenses. This License grants no rights in third-party materials beyond those the applicable third-party terms provide.
+
+6. No Patent, Trademark, or Other Implied License
+
+No patent, trademark, trade-secret, database, publicity, or other intellectual-property license is granted by implication, estoppel, or otherwise, except for the limited copyright permission expressly stated in Section 2.
+
+7. No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT, SECURITY, RELIABILITY, OR ERROR-FREE OPERATION.
+
+8. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT OWNER SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, CONSEQUENTIAL, OR OTHER DAMAGES, OR FOR LOSS OF DATA, PROFITS, REVENUE, BUSINESS, OR GOODWILL, ARISING FROM OR RELATED TO ACCESS TO OR USE OF THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+9. Termination
+
+Any permission granted under this License terminates automatically if you breach its terms. Upon termination, you must cease exercising the permissions granted by this License and, where legally and technically practicable, delete copies made under the limited evaluation permission, except copies retained solely as required by law or platform operation.
+
+10. Additional Permission
+
+Commercial, production, redistribution, modification, integration, sublicensing, or other rights not granted here require prior written permission from the copyright owner.
+
+For licensing inquiries, contact the repository owner through the GitHub profile associated with this repository.
+
+11. No Open-Source Grant
+
+This is a proprietary source-available license. It is not an OSI-approved open-source license, a free-software license, or a grant of rights under any standard permissive or copyleft license.
+
+All rights not expressly granted are reserved.
