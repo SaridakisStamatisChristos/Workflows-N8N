@@ -11,7 +11,7 @@ permissions:
 jobs:
   agentic-verification:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -21,6 +21,21 @@ jobs:
         run: python -m compileall -q agentic_engineering tests
       - name: Unit and negative tests
         run: python -m unittest discover -s tests -p 'test_agentic_*.py' -v
+      - name: Build RelayForge verifier image
+        run: |
+          docker build \
+            -f docker/relayforge-verifier.Dockerfile \
+            -t relayforge-verifier:ci .
+      - name: Smoke RelayForge verifier without network
+        run: |
+          docker run --rm \
+            --network none \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --read-only \
+            --tmpfs /tmp:rw,nosuid,size=128m \
+            relayforge-verifier:ci \
+            sh -lc 'node --version && pnpm --version && pg_isready -h /tmp/pgsocket -U postgres -d relayforge'
       - name: Docker isolation pilot
         run: python -m agentic_engineering.pilot --mode docker --out artifacts/pilot-evidence.json
       - name: Generate evaluation report
