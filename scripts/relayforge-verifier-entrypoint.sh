@@ -27,4 +27,6 @@ export HOME=/tmp/home
 export XDG_CACHE_HOME=/tmp/cache
 export CI=true
 
-exec "$@"
+# Bootstrap requires only CHOWN/SETUID/SETGID. Drop every capability before any
+# target-repository verification command executes.
+exec setpriv --bounding-set=-all --inh-caps=-all --ambient-caps=-all -- "$@"
