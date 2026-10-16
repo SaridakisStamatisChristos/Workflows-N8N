@@ -2,6 +2,80 @@
 
 Production-oriented n8n workflows, reusable automation systems, bounded autonomous orchestration patterns, and a safety-first agentic engineering platform.
 
+## Architecture at a glance
+
+```mermaid
+flowchart TB
+  subgraph Ingress["Ingress & operators"]
+    Linear["Linear issues"]
+    Webhooks["Authenticated webhooks"]
+    Operator["Telegram / Slack / Discord"]
+    Schedules["Scheduled jobs"]
+  end
+
+  subgraph N8N["n8n workflow control plane"]
+    Command["Autonomous Command Center"]
+    Router["AI router + specialists"]
+    Risk["Deterministic risk / approval policy"]
+    Approval["Human approval wait"]
+    Dispatcher["Idempotent action dispatcher"]
+    Engineering["Engineering intake + bounded ChangeSet generation"]
+  end
+
+  subgraph State["State & coordination"]
+    Memory[("Memory store\nstatic data or PostgreSQL")]
+    Ledger[("Action ledger\nstatic data or PostgreSQL")]
+  end
+
+  subgraph Intelligence["Model & research services"]
+    OpenAI["OpenAI Responses API"]
+    Research["Current-web research"]
+  end
+
+  subgraph Effects["Narrow approved side effects"]
+    Google["Gmail / Calendar / Drive"]
+    Messaging["Telegram / Slack / Discord"]
+    GitHubWrite["GitHub write adapter"]
+  end
+
+  subgraph Campaign["Isolated engineering campaign"]
+    Actions["GitHub Actions runner"]
+    Sandbox["Ephemeral Docker sandbox\nnetwork disabled"]
+    Verify["Trusted tests + path policy"]
+    Evidence["Evidence manifest"]
+    DraftPR["Isolated branch + DRAFT PR"]
+  end
+
+  Webhooks --> Command
+  Operator --> Command
+  Schedules --> Command
+  Command --> Router
+  Router <--> OpenAI
+  Router --> Research
+  Router --> Risk
+  Router <--> Memory
+  Risk -->|"read-only result"| Memory
+  Risk -->|"side effect requested"| Approval
+  Approval -->|"approved"| Dispatcher
+  Dispatcher <--> Ledger
+  Dispatcher --> Google
+  Dispatcher --> Messaging
+  Dispatcher --> GitHubWrite
+
+  Linear --> Engineering
+  Engineering <--> OpenAI
+  Engineering --> Actions
+  Actions --> Sandbox
+  Sandbox --> Verify
+  Verify --> Evidence
+  Evidence --> DraftPR
+
+  classDef boundary stroke-width:2px,stroke-dasharray:5 4;
+  class Approval,Sandbox,Verify,Dispatcher boundary;
+```
+
+The repository has two complementary execution paths: an **n8n-native automation control plane** for routed work and approved side effects, and an **agentic engineering path** that can publish only verified draft pull requests after isolated execution.
+
 ## Agentic Engineering Platform
 
 The repository now includes an engineering-agent paved road aligned with the responsibilities of n8n's Agentic Engineering Platform Engineer role:
