@@ -3,7 +3,10 @@
   "$id": "https://example.invalid/schemas/change-set.schema.json",
   "title": "AgentChangeSet",
   "type": "object",
-  "required": ["task_id", "operations"],
+  "required": [
+    "task_id",
+    "operations"
+  ],
   "properties": {
     "task_id": {"type": "string"},
     "summary": {"type": "string"},
@@ -21,6 +24,15 @@
         },
         "additionalProperties": false
       }
+    },
+    "review_evidence": {
+      "type": "object",
+      "properties": {
+        "initial": {"type": "object"},
+        "final": {"type": ["object", "null"]},
+        "repair_attempts": {"type": "integer", "minimum": 0, "maximum": 1}
+      },
+      "additionalProperties": true
     }
   },
   "additionalProperties": false

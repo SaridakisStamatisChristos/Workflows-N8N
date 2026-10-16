@@ -46,7 +46,6 @@ def apply_change_set(workspace: Path, task: dict[str, Any], policy: dict[str, An
         raise ContractError("planned path policy denied change-set: " + "; ".join(decision.reasons))
     if decision.requires_human_review and not bool(task.get("authorization", {}).get("human_review_granted")):
         raise ContractError("planned change-set touches review-required paths without human authorization")
-
     for op in change_set["operations"]:
         target = _safe_target(workspace, op["path"])
         if op["op"] == "write_file":
@@ -64,38 +63,23 @@ def apply_change_set(workspace: Path, task: dict[str, Any], policy: dict[str, An
 
 
 def _sanitized_env(home: Path) -> dict[str, str]:
-    return {
-        "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
-        "LANG": "C.UTF-8",
-        "LC_ALL": "C.UTF-8",
-        "HOME": str(home),
-        "PYTHONDONTWRITEBYTECODE": "1",
-    }
+    return {"PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "HOME": str(home), "PYTHONDONTWRITEBYTECODE": "1"}
 
 
 def run_command_local(workspace: Path, command: str, timeout: int) -> dict[str, Any]:
     started = time.monotonic()
     try:
-        proc = subprocess.run(
-            ["bash", "-lc", command], cwd=workspace, env=_sanitized_env(workspace / ".home"),
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout, check=False,
-        )
+        proc = subprocess.run(["bash", "-lc", command], cwd=workspace, env=_sanitized_env(workspace / ".home"), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout, check=False)
         return {"command": command, "status": "passed" if proc.returncode == 0 else "failed", "exit_code": proc.returncode, "output": proc.stdout[-12000:], "duration_seconds": round(time.monotonic() - started, 3)}
     except subprocess.TimeoutExpired as exc:
         output = ((exc.stdout or "") + (exc.stderr or ""))[-12000:] if isinstance(exc.stdout, str) else ""
         return {"command": command, "status": "failed", "exit_code": 124, "output": output, "duration_seconds": round(time.monotonic() - started, 3), "failure": "timeout"}
 
 
-def run_command_docker(workspace: Path, command: str, timeout: int, policy: dict[str, Any], image: str = "python:3.12-slim") -> dict[str, Any]:
+def run_command_docker(workspace: Path, command: str, timeout: int, policy: dict[str, Any], image: str | None = None) -> dict[str, Any]:
     sandbox = policy.get("sandbox", {})
-    args = [
-        "docker", "run", "--rm", "--network", "none", "--cap-drop", "ALL",
-        "--security-opt", "no-new-privileges", "--pids-limit", str(sandbox.get("pids_limit", 128)),
-        "--memory", str(sandbox.get("memory", "768m")), "--cpus", str(sandbox.get("cpus", "1.0")),
-        "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
-        "-v", f"{workspace.resolve()}:/workspace:rw", "-w", "/workspace", "-e", "PYTHONDONTWRITEBYTECODE=1",
-        image, "sh", "-lc", command,
-    ]
+    image = image or str(sandbox.get("image", "python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1"))
+    args = ["docker", "run", "--rm", "--network", "none", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", str(sandbox.get("pids_limit", 128)), "--memory", str(sandbox.get("memory", "768m")), "--cpus", str(sandbox.get("cpus", "1.0")), "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "-v", f"{workspace.resolve()}:/workspace:rw", "-w", "/workspace", "-e", "PYTHONDONTWRITEBYTECODE=1", image, "sh", "-lc", command]
     started = time.monotonic()
     try:
         proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout, check=False)
@@ -117,7 +101,6 @@ def execute_campaign(source: Path, task: dict[str, Any], change_set: dict[str, A
         raise ContractError("task policy denied campaign: " + "; ".join(issue_decision.reasons))
     if issue_decision.requires_human_review and not bool(task.get("authorization", {}).get("human_review_granted")):
         raise ContractError("task requires human review before autonomous coding")
-
     temp_parent = Path(tempfile.mkdtemp(prefix="agentic-campaign-"))
     workspace = temp_parent / "workspace"
     shutil.copytree(source, workspace, symlinks=True, ignore=shutil.ignore_patterns('.git', 'artifacts'))
@@ -125,7 +108,6 @@ def execute_campaign(source: Path, task: dict[str, Any], change_set: dict[str, A
     started = time.monotonic()
     tests: list[dict[str, Any]] = []
     known_failures: list[str] = []
-
     try:
         apply_change_set(workspace, task, policy, change_set)
         after_apply = snapshot(workspace)
@@ -138,7 +120,6 @@ def execute_campaign(source: Path, task: dict[str, Any], change_set: dict[str, A
             raise ContractError("actual changed paths violate policy: " + "; ".join(actual_decision.reasons))
         if actual_decision.requires_human_review and not bool(task.get("authorization", {}).get("human_review_granted")):
             raise ContractError("actual changed paths require human review")
-
         max_runtime = int(policy.get("sandbox", {}).get("max_runtime_seconds", 900))
         for command in verification_commands:
             runner = run_command_docker if mode == "docker" else run_command_local
@@ -147,12 +128,10 @@ def execute_campaign(source: Path, task: dict[str, Any], change_set: dict[str, A
             if result["status"] != "passed":
                 known_failures.append(f"verification failed: {command}")
                 break
-
         after_tests = snapshot(workspace)
         post_test_changes = changed_paths(after_apply, after_tests)
         if post_test_changes:
             known_failures.append("verification commands modified tracked workspace content: " + ", ".join(post_test_changes))
-
         success = bool(tests) and all(x["status"] == "passed" for x in tests) and not post_test_changes
         evidence = {
             "task": {"task_id": task["task_id"], "source": task["source"], "title": task["title"], "sensitivity": task.get("sensitivity", "normal")},
@@ -164,11 +143,11 @@ def execute_campaign(source: Path, task: dict[str, Any], change_set: dict[str, A
                 {"name": "issue_policy", "status": "passed", "detail": issue_decision.as_dict()},
                 {"name": "planned_path_policy", "status": "passed"},
                 {"name": "actual_path_policy", "status": "passed", "detail": actual_decision.as_dict()},
-            ],
+            ] + ([{"name": "adversarial_model_review", "status": "passed", "detail": change_set.get("review_evidence")}] if change_set.get("review_evidence") else []),
             "known_failures": known_failures,
             "risk_areas": list(actual_decision.reasons if actual_decision.requires_human_review else []),
             "sensitive_paths_touched": [p for p in actual if evaluate_paths([p], task, policy).requires_human_review],
-            "assumptions": ["verification commands came from trusted repository benchmark/configuration, not issue text or model output"],
+            "assumptions": ["verification commands came from trusted repository benchmark/configuration, not issue text or model output", "model adversarial review is advisory evidence only and cannot authorize writes"],
             "review_hotspots": actual,
             "agent_confidence": change_set.get("confidence"),
             "human_judgment_required": ["Review semantic correctness and scope before merging"] + (["Sensitive path review required"] if actual_decision.requires_human_review else []),
