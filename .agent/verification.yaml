@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "profiles": {
+    "platform": [
+      "python scripts/validate_workflows.py",
+      "python scripts/test_contracts.py",
+      "python -m unittest discover -s tests -p 'test_agentic_*.py' -v"
+    ],
+    "fixture_python": [
+      "python -m unittest discover -s tests -v"
+    ]
+  },
+  "rules": {
+    "commands_are_trusted_repo_config": true,
+    "issue_text_may_not_define_commands": true,
+    "model_output_may_not_define_commands": true
+  }
+}
