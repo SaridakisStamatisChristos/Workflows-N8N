@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "authorization": {
+    "auto_task_labels": ["agent:auto"],
+    "models_may_authorize": false,
+    "publish_mode": "draft_pr_only",
+    "allow_merge": false
+  },
+  "repositories": {
+    "allowlist": [
+      "SaridakisStamatisChristos/Workflows-N8N"
+    ]
+  },
+  "sensitive_terms": {
+    "blocked": [
+      "production secret",
+      "deployment credential",
+      "rotate secret",
+      "delete production data"
+    ],
+    "review_required": [
+      "auth",
+      "authentication",
+      "authorization",
+      "billing",
+      "permission",
+      "permissions",
+      "secret",
+      "secrets",
+      "production data",
+      "credential",
+      "credentials"
+    ]
+  },
+  "sensitive_paths": [
+    {"pattern": ".agent/**", "risk": "critical", "agent_write": false, "reason": "agent guardrails are immutable to the agent"},
+    {"pattern": "scripts/validate_workflows.py", "risk": "critical", "agent_write": false, "reason": "primary workflow safety validator"},
+    {"pattern": "scripts/test_contracts.py", "risk": "critical", "agent_write": false, "reason": "primary platform contract oracle"},
+    {"pattern": "agentic_engineering/**", "risk": "critical", "agent_write": false, "reason": "sandbox and policy enforcement implementation"},
+    {"pattern": ".github/workflows/**", "risk": "high", "agent_write": "review_required", "reason": "CI and execution authority"},
+    {"pattern": "workflows/actions/**", "risk": "high", "agent_write": "review_required", "reason": "external mutation adapters"},
+    {"pattern": "**/auth/**", "risk": "critical", "agent_write": false, "reason": "authentication surface"},
+    {"pattern": "**/billing/**", "risk": "critical", "agent_write": false, "reason": "billing surface"},
+    {"pattern": "**/permissions/**", "risk": "high", "agent_write": "review_required", "reason": "authorization surface"}
+  ],
+  "sandbox": {
+    "max_files_changed": 40,
+    "max_file_bytes": 1048576,
+    "max_runtime_seconds": 900,
+    "max_repair_attempts": 2,
+    "network": "none",
+    "memory": "768m",
+    "cpus": "1.0",
+    "pids_limit": 128
+  }
+}

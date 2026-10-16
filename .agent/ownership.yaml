@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "rules": [
+    {"pattern": ".agent/**", "owners": ["human-platform-owner"], "required_review": true},
+    {"pattern": ".github/workflows/**", "owners": ["human-platform-owner"], "required_review": true},
+    {"pattern": "workflows/actions/**", "owners": ["human-platform-owner"], "required_review": true},
+    {"pattern": "workflows/engineering/**", "owners": ["human-platform-owner"], "required_review": true},
+    {"pattern": "agentic_engineering/**", "owners": ["human-platform-owner"], "required_review": true},
+    {"pattern": "benchmarks/**", "owners": ["human-platform-owner"], "required_review": false}
+  ]
+}
