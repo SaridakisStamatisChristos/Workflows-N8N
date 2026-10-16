@@ -16,7 +16,9 @@ OWNER_PASSWORD="SmokeOwner2026!"
 
 cleanup() {
   docker rm -f "$NAME" >/dev/null 2>&1 || true
-  rm -rf "$TMP"
+  # n8n writes some cache/package files as its container UID. CI runners are ephemeral,
+  # so cleanup must never convert a successful smoke test into a failure.
+  rm -rf "$TMP" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -73,7 +75,6 @@ curl --fail-with-body -sS \
   -H 'content-type: application/json' \
   --data "{\"email\":\"${OWNER_EMAIL}\",\"firstName\":\"Smoke\",\"lastName\":\"Runner\",\"password\":\"${OWNER_PASSWORD}\"}" \
   >/dev/null
-
 docker stop "$NAME" >/dev/null
 
 COMMON=(
