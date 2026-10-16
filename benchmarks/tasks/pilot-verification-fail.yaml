@@ -1,0 +1,23 @@
+{
+  "id": "pilot-verification-fail-v1",
+  "classification": "SIMULATED",
+  "answer_material_present": true,
+  "expected_outcome": "verification_failed",
+  "fixture_source": "benchmarks/fixtures/simple_math",
+  "fixture_change_set": "benchmarks/fixtures/change_sets/pilot-verification-fail.json",
+  "task": {
+    "task_id": "fixture-linear-103",
+    "source": {"provider": "fixture", "source_id": "FIX-103", "provenance": "fixture"},
+    "repository": "SaridakisStamatisChristos/Workflows-N8N",
+    "base_ref": "fixture-base",
+    "title": "Allowed change that fails verification",
+    "description": "Negative control: verify failing tests prevent successful publication.",
+    "labels": ["agent:auto", "fixture", "negative-control"],
+    "priority": "medium",
+    "allowed_paths": ["src/**"],
+    "forbidden_paths": ["tests/**", ".github/**", ".agent/**"],
+    "verification_profile": "fixture_python",
+    "sensitivity": "normal",
+    "authorization": {"human_review_granted": false}
+  }
+}

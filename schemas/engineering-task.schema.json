@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/engineering-task.schema.json",
+  "title": "EngineeringTask",
+  "type": "object",
+  "required": ["task_id", "source", "repository", "title", "description", "labels", "allowed_paths", "forbidden_paths", "verification_profile"],
+  "properties": {
+    "task_id": {"type": "string", "minLength": 1},
+    "source": {
+      "type": "object",
+      "required": ["provider", "source_id", "provenance"],
+      "properties": {
+        "provider": {"enum": ["linear", "fixture", "manual"]},
+        "source_id": {"type": "string"},
+        "provenance": {"enum": ["linear_api", "authenticated_relay", "fixture", "manual"]}
+      },
+      "additionalProperties": true
+    },
+    "repository": {"type": "string", "pattern": "^[^/]+/[^/]+$"},
+    "base_ref": {"type": "string"},
+    "title": {"type": "string"},
+    "description": {"type": "string"},
+    "labels": {"type": "array", "items": {"type": "string"}},
+    "priority": {"type": ["string", "number", "null"]},
+    "allowed_paths": {"type": "array", "items": {"type": "string"}},
+    "forbidden_paths": {"type": "array", "items": {"type": "string"}},
+    "verification_profile": {"type": "string"},
+    "sensitivity": {"enum": ["normal", "review_required", "blocked"]},
+    "authorization": {"type": "object"}
+  },
+  "additionalProperties": true
+}

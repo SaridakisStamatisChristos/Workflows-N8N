@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/pr-evidence.schema.json",
+  "title": "PullRequestEvidence",
+  "type": "object",
+  "required": ["task", "repository", "change_summary", "files_changed", "tests", "static_checks", "known_failures", "risk_areas", "sensitive_paths_touched", "assumptions", "review_hotspots", "human_judgment_required", "measurement", "verification_level"],
+  "properties": {
+    "task": {"type": "object"},
+    "repository": {"type": "object"},
+    "change_summary": {"type": "array"},
+    "files_changed": {"type": "array", "items": {"type": "string"}},
+    "tests": {"type": "array"},
+    "static_checks": {"type": "array"},
+    "known_failures": {"type": "array"},
+    "risk_areas": {"type": "array"},
+    "sensitive_paths_touched": {"type": "array"},
+    "assumptions": {"type": "array"},
+    "review_hotspots": {"type": "array"},
+    "agent_confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+    "human_judgment_required": {"type": "array"},
+    "artifact_links": {"type": "array"},
+    "measurement": {"type": "object"},
+    "verification_level": {"enum": ["SIMULATED", "STATICALLY_VERIFIED", "RUNTIME_VERIFIED", "EXTERNALLY_VERIFIED", "BENCHMARKED", "UNVERIFIED"]}
+  },
+  "additionalProperties": true
+}

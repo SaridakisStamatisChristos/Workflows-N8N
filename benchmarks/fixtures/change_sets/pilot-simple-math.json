@@ -1,0 +1,12 @@
+{
+  "task_id": "fixture-linear-101",
+  "summary": "Correct add() to return the arithmetic sum.",
+  "confidence": 0.99,
+  "operations": [
+    {
+      "op": "write_file",
+      "path": "src/math_ops.py",
+      "content": "def add(a, b):\n    return a + b\n"
+    }
+  ]
+}

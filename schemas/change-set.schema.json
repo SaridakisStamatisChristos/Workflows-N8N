@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/change-set.schema.json",
+  "title": "AgentChangeSet",
+  "type": "object",
+  "required": [
+    "task_id",
+    "operations"
+  ],
+  "properties": {
+    "task_id": {"type": "string"},
+    "summary": {"type": "string"},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "operations": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": ["op", "path"],
+        "properties": {
+          "op": {"enum": ["write_file", "delete_file"]},
+          "path": {"type": "string"},
+          "content": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "review_evidence": {
+      "type": "object",
+      "properties": {
+        "initial": {"type": "object"},
+        "final": {"type": ["object", "null"]},
+        "repair_attempts": {"type": "integer", "minimum": 0, "maximum": 1}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
