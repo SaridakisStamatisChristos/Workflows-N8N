@@ -31,6 +31,9 @@ jobs:
           docker run --rm \
             --network none \
             --cap-drop ALL \
+            --cap-add CHOWN \
+            --cap-add SETUID \
+            --cap-add SETGID \
             --security-opt no-new-privileges \
             --read-only \
             --tmpfs /tmp:rw,nosuid,size=128m \
