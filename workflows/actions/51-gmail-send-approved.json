@@ -1,0 +1,11 @@
+{
+  "name":"Elite Autonomous - Gmail Send Approved",
+  "nodes":[
+    {"parameters":{"inputSource":"workflowInputs","workflowInputs":{"values":[{"name":"approved","type":"boolean"},{"name":"request_id","type":"string"},{"name":"to","type":"string"},{"name":"subject","type":"string"},{"name":"body","type":"string"},{"name":"email_type","type":"string"}]}},"id":"g1","name":"Input","type":"n8n-nodes-base.executeWorkflowTrigger","typeVersion":1.1,"position":[-520,0]},
+    {"parameters":{"mode":"runOnceForEachItem","jsCode":"if($json.approved!==true) throw new Error('Gmail send requires approved=true'); const to=String($json.to||'').trim(); if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(to)) throw new Error('Invalid recipient'); const subject=String($json.subject||'').slice(0,998); const body=String($json.body||''); if(!subject||!body) throw new Error('subject and body are required'); if(body.length>100000) throw new Error('body too large'); const email_type=String($json.email_type||'text').toLowerCase()==='html'?'html':'text'; return[{json:{...$json,to,subject,body,email_type}}];"},"id":"g2","name":"Validate","type":"n8n-nodes-base.code","typeVersion":2,"position":[-280,0]},
+    {"parameters":{"resource":"message","operation":"send","sendTo":"={{ $json.to }}","subject":"={{ $json.subject }}","emailType":"={{ $json.email_type }}","message":"={{ $json.body }}"},"id":"g3","name":"Send Gmail","type":"n8n-nodes-base.gmail","typeVersion":2.2,"position":[-20,0]},
+    {"parameters":{"mode":"runOnceForEachItem","jsCode":"return[{json:{ok:true,action:'gmail_send',request_id:$('Validate').item.json.request_id,result:$json}}];"},"id":"g4","name":"Action Result","type":"n8n-nodes-base.code","typeVersion":2,"position":[240,0]}
+  ],
+  "connections":{"Input":{"main":[[{"node":"Validate","type":"main","index":0}]]},"Validate":{"main":[[{"node":"Send Gmail","type":"main","index":0}]]},"Send Gmail":{"main":[[{"node":"Action Result","type":"main","index":0}]]}},
+  "active":false,"settings":{"executionOrder":"v1"},"meta":{"templateCredsSetupCompleted":false},"tags":[]
+}

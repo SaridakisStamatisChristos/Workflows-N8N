@@ -1,38 +1,58 @@
 # Import and Wiring Order
 
-1. Import `05-memory-store.json`.
-2. Import `10-research-specialist.json`.
-3. Import `20-engineering-specialist.json`.
-4. Import `30-communications-specialist.json`.
-5. Import `35-github-readonly-specialist.json`.
-6. Import `90-error-handler.json` and select it as the error workflow for the command center/specialists if desired.
-7. Import `00-autonomous-command-center.json` last.
+## 1. Import foundational sub-workflows
 
-## Bind sub-workflow IDs
+1. `workflows/autonomous/05-memory-store.json`
+2. `workflows/autonomous/10-research-specialist.json`
+3. `workflows/autonomous/20-engineering-specialist.json`
+4. `workflows/autonomous/30-communications-specialist.json`
+5. `workflows/autonomous/35-github-readonly-specialist.json`
+6. `workflows/autonomous/90-error-handler.json`
+7. `workflows/autonomous/91-recovery-advisor.json`
 
-Open each Execute Sub-workflow node in the command center and select the imported workflow that matches its label. The portable export contains `REPLACE_*_WORKFLOW_ID` placeholders because n8n assigns workflow IDs at import time.
+## 2. Import write adapters
 
-## Credentials
+8. `workflows/actions/51-gmail-send-approved.json`
+9. `workflows/actions/52-calendar-create-approved.json`
+10. `workflows/actions/53-drive-create-text-approved.json`
+11. `workflows/actions/54-telegram-notify-approved.json`
+12. `workflows/actions/50-approved-action-dispatcher.json`
 
-- **Command Webhook**: Header Auth credential.
-- **OpenAI Router / specialist OpenAI nodes**: HTTP Bearer Auth credential containing the OpenAI API key.
-- **GitHub specialist HTTP nodes**: HTTP Bearer Auth credential containing a GitHub token with read-only access to the repositories you intend to inspect.
-- **Wait for Human Approval**: configure incoming Header Auth if your n8n build requires/selects it separately.
+Bind the dispatcher placeholders to the four imported action workflow IDs.
 
-## Publish order
+## 3. Import command center
 
-Test each specialist independently first. Then activate/publish the memory and specialists required by your n8n version. Finally test and publish the command center.
+13. `workflows/autonomous/00-autonomous-command-center.json`
 
-## Smoke test
+Bind these placeholders:
 
-POST to the command webhook with:
+- `REPLACE_MEMORY_WORKFLOW_ID`
+- `REPLACE_RESEARCH_WORKFLOW_ID`
+- `REPLACE_ENGINEERING_WORKFLOW_ID`
+- `REPLACE_COMMUNICATIONS_WORKFLOW_ID`
+- `REPLACE_GITHUB_WORKFLOW_ID`
+- `REPLACE_ACTION_DISPATCHER_WORKFLOW_ID`
 
-```json
-{
-  "task": "Research the current state of durable workflow orchestration and identify three design risks.",
-  "priority": "normal",
-  "context": {"goal": "production automation"}
-}
-```
+## 4. Assign credentials
 
-Expected: route `research`, structured specialist output, and either HTTP 200 or HTTP 202 if policy marks the request high-risk.
+- Command webhook: Header Auth.
+- OpenAI nodes: HTTP Bearer Auth with OpenAI API key.
+- GitHub read-only specialist: HTTP Bearer Auth with least-privilege read token.
+- Gmail action: Gmail OAuth2 credential.
+- Calendar action: Google Calendar OAuth2 credential.
+- Drive action: Google Drive OAuth2 credential.
+- Telegram action/gateway: Telegram bot credential.
+
+Never place static secrets in Code or HTTP Request headers.
+
+## 5. Import Telegram operator gateway
+
+14. `workflows/operators/60-telegram-command-gateway.json`
+
+Edit `REPLACE_ALLOWED_CHAT_ID`, replace `REPLACE_COMMAND_CENTER_WEBHOOK_URL`, and assign an HTTP Header Auth credential matching the command webhook secret.
+
+## 6. Verify before publish
+
+Test each supporting workflow independently. Then test command-center requests with and without an action envelope. Confirm that an action returns 202, pauses, rejects a false approval, and executes only after true approval.
+
+Finally publish/activate only the workflows you intend to expose.

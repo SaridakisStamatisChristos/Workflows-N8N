@@ -1,0 +1,15 @@
+{
+  "task": "Draft a concise deployment-complete email and prepare it for approved sending.",
+  "priority": "normal",
+  "context": {
+    "facts": ["Deployment completed", "Health checks passed"]
+  },
+  "action": {
+    "type": "gmail_send",
+    "payload": {
+      "to": "recipient@example.com",
+      "subject": "Deployment complete",
+      "email_type": "text"
+    }
+  }
+}

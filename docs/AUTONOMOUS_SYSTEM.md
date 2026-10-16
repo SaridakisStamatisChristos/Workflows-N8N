@@ -1,52 +1,64 @@
-# Elite Autonomous n8n System
+# Elite Autonomous n8n System v2
 
 ## Architecture
 
-The system follows a control-plane pattern:
-
-`Authenticated Command Webhook → Input Normalization → Memory Recall → AI Router → Specialist Sub-workflow → Deterministic Policy Gate → Ready Response OR Human Approval Wait → Memory Write`
-
-### Why compositional workflows
-
-n8n supports parent workflows calling independently testable sub-workflows through `Execute Sub-workflow` / `Execute Sub-workflow Trigger`. This repository uses that pattern so each specialist can be tested and upgraded without destabilizing the whole system.
+```text
+Authenticated Command Webhook
+  → deterministic input/action validation
+  → bounded memory recall
+  → OpenAI router
+  → one specialist
+      research | engineering | communications | GitHub read-only | general
+  → deterministic policy gate
+      → no approval needed: persist + HTTP 200
+      → approval/action present: HTTP 202 + signed resume URL
+          → Wait up to 24h
+          → human approve/reject
+          → if approved action exists
+              → deterministic action dispatcher
+              → Gmail | Calendar | Drive | Telegram adapter
+              → persist action result
+```
 
 ## Specialists
 
 ### Research
-Uses the OpenAI Responses API with web search enabled. It must separate factual findings from inference and return structured JSON.
+Uses the OpenAI Responses API with built-in web search. It separates findings/sources and cannot execute external side effects.
 
 ### Engineering
-Produces implementation plans, tests, risks, and verification steps. It does not claim repository mutations unless evidence is present.
+Produces implementation plans, tests, risks, and verification steps. It cannot claim repository changes unless evidence is supplied.
 
 ### Communications
-Drafts messages and briefs. Send/publish intent is always marked as requiring approval.
+Drafts messages/briefs. Sending remains a separate approved action.
 
-### GitHub Read-only
-Reads repository metadata and one requested path through GitHub REST, then analyzes it. No write endpoint exists in this workflow.
+### GitHub read-only
+Validates `owner/repo`, fetches repository metadata plus one requested path through GitHub REST, and analyzes the supplied data. No GitHub write endpoint exists in this specialist.
 
 ## Memory
 
-The first portable memory backend uses `$getWorkflowStaticData('global')` in a dedicated sub-workflow and caps retained history. This removes external database requirements while giving cross-execution state for production executions. For larger deployments, replace this module with Postgres/Redis/vector storage while preserving the input/output contract.
+The portable default uses `$getWorkflowStaticData('global')` inside the dedicated memory sub-workflow. It implements append/put/get/recent/find_request and caps the event ring buffer at 200 entries.
 
-## Human approval
+For large or multi-instance deployments, replace the memory implementation behind the same workflow contract with Postgres/Redis/vector storage.
 
-High-risk or explicitly approval-required results return HTTP 202. The response contains n8n's execution-specific signed resume URL. The execution waits up to 24 hours for a POST body like:
+## Write authority
 
-```json
-{"approved": true, "note": "Reviewed"}
-```
+Write authority is deliberately separated from reasoning. An LLM does not get arbitrary HTTP, shell, Gmail, Calendar, Drive, Telegram, or GitHub-write tools.
 
-The approval outcome is written to memory. Write-capable adapters should be connected only after this node.
+An external caller must provide an explicit allowlisted `action.type` and payload. The command center forces approval whenever an action exists. The approval preview contains the resolved action. Only after the signed resume callback receives `approved=true` can the deterministic dispatcher call a narrow write adapter.
 
-## Security boundary
+Every adapter repeats the `approved=true` invariant and validates its own payload. This is defense in depth against routing/wiring mistakes.
 
-- Webhook ingress uses Header Auth.
-- OpenAI/GitHub API keys are n8n credentials, not JSON literals.
-- The GitHub specialist is read-only.
-- No arbitrary shell/command execution exists.
-- No generic arbitrary-URL action tool is exposed to the model.
-- High-risk results cannot silently bypass the deterministic approval rule.
+## Operator control
 
-## Next extension layer
+The primary API is the authenticated command webhook. `workflows/operators/60-telegram-command-gateway.json` provides a Telegram front-end with a fixed chat allowlist and forwards commands through authenticated HTTP to the command center.
 
-The safe next additions are dedicated allowlisted action sub-workflows for GitHub issues/PR comments, Gmail drafts/sends, Calendar events, Drive document operations, and Telegram/Slack operator ingress. Each should have explicit schemas, least-privilege credentials, idempotency keys, dry-run mode, and approval requirements for irreversible operations.
+## Reliability and recovery
+
+- external calls use retry/timeout controls where appropriate;
+- malformed model output is contract-checked;
+- `90-error-handler.json` captures a bounded error ring buffer;
+- `91-recovery-advisor.json` classifies failures and proposes bounded remediation, but does not mutate workflows or automatically retry non-idempotent actions.
+
+## Deliberate boundaries
+
+The system does not provide arbitrary shell execution, unrestricted URL fetching as an action tool, financial transfers, permission/credential mutation, or automatic publishing/deletion. Add new actions as separately reviewed allowlisted adapters rather than expanding the model's raw authority.

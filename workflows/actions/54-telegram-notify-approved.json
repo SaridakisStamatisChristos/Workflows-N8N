@@ -1,0 +1,11 @@
+{
+  "name":"Elite Autonomous - Telegram Notify Approved",
+  "nodes":[
+    {"parameters":{"inputSource":"workflowInputs","workflowInputs":{"values":[{"name":"approved","type":"boolean"},{"name":"request_id","type":"string"},{"name":"chat_id","type":"string"},{"name":"text","type":"string"}]}},"id":"t1","name":"Input","type":"n8n-nodes-base.executeWorkflowTrigger","typeVersion":1.1,"position":[-520,0]},
+    {"parameters":{"mode":"runOnceForEachItem","jsCode":"if($json.approved!==true) throw new Error('Telegram notify requires approved=true'); const chat_id=String($json.chat_id||'').trim(); const text=String($json.text||'').trim(); if(!chat_id) throw new Error('chat_id required'); if(!text||text.length>4096) throw new Error('Telegram text must be 1..4096 chars'); return[{json:{...$json,chat_id,text}}];"},"id":"t2","name":"Validate","type":"n8n-nodes-base.code","typeVersion":2,"position":[-280,0]},
+    {"parameters":{"resource":"message","operation":"sendMessage","chatId":"={{ $json.chat_id }}","text":"={{ $json.text }}","additionalFields":{}},"id":"t3","name":"Send Telegram","type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[-20,0]},
+    {"parameters":{"mode":"runOnceForEachItem","jsCode":"return[{json:{ok:true,action:'telegram_notify',request_id:$('Validate').item.json.request_id,result:$json}}];"},"id":"t4","name":"Action Result","type":"n8n-nodes-base.code","typeVersion":2,"position":[240,0]}
+  ],
+  "connections":{"Input":{"main":[[{"node":"Validate","type":"main","index":0}]]},"Validate":{"main":[[{"node":"Send Telegram","type":"main","index":0}]]},"Send Telegram":{"main":[[{"node":"Action Result","type":"main","index":0}]]}},
+  "active":false,"settings":{"executionOrder":"v1"},"meta":{"templateCredsSetupCompleted":false},"tags":[]
+}

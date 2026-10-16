@@ -1,38 +1,74 @@
 # Workflows-N8N
 
-A curated repository of production-oriented n8n workflows, reusable automation systems, and autonomous orchestration patterns.
+Production-oriented n8n workflows, reusable automation systems, and bounded autonomous orchestration patterns.
 
-## Current systems
+## Elite systems
 
-### 1. Elite AI Ops Orchestrator
+### Elite AI Ops Orchestrator
 `workflows/core/elite-ai-ops-orchestrator.json`
 
-A secure webhook-driven multi-pass AI workflow: validation → planner → adversarial critic → final synthesis → deterministic risk/approval gate.
+Authenticated webhook → validation → planner → adversarial critic → final synthesis → deterministic approval gate.
 
-### 2. Elite Autonomous Core v1
-`workflows/autonomous/`
+### Elite Autonomous System v2
+`workflows/autonomous/00-autonomous-command-center.json`
 
-A compositional autonomous system built around an n8n command center and independently testable specialist sub-workflows:
+A compositional control plane with:
 
-- `00-autonomous-command-center.json` — routing, memory retrieval, policy gate, approval/resume.
-- `05-memory-store.json` — bounded persistent workflow memory using n8n static data.
-- `10-research-specialist.json` — OpenAI Responses API + web search.
-- `20-engineering-specialist.json` — architecture/code/algorithm analysis and verification planning.
-- `30-communications-specialist.json` — drafting only; sending/publishing is approval-gated.
-- `35-github-readonly-specialist.json` — read-only GitHub metadata/file analysis.
-- `90-error-handler.json` — centralized error capture ring buffer.
+- bounded persistent memory;
+- AI routing into independent specialists;
+- current-web research through OpenAI Responses web search;
+- engineering analysis and verification planning;
+- communications drafting;
+- read-only GitHub inspection;
+- deterministic risk policy;
+- signed human approval/resume flow;
+- explicit approved-action contracts;
+- Gmail, Google Calendar, Google Drive, and Telegram write adapters;
+- Telegram operator gateway;
+- centralized error capture and bounded recovery analysis.
 
-See `docs/AUTONOMOUS_SYSTEM.md` and `docs/IMPORT_ORDER.md`.
+## Repository layout
 
-## Design principles
+```text
+workflows/
+  core/
+    elite-ai-ops-orchestrator.json
+  autonomous/
+    00-autonomous-command-center.json
+    05-memory-store.json
+    10-research-specialist.json
+    20-engineering-specialist.json
+    30-communications-specialist.json
+    35-github-readonly-specialist.json
+    90-error-handler.json
+    91-recovery-advisor.json
+  actions/
+    50-approved-action-dispatcher.json
+    51-gmail-send-approved.json
+    52-calendar-create-approved.json
+    53-drive-create-text-approved.json
+    54-telegram-notify-approved.json
+  operators/
+    60-telegram-command-gateway.json
+docs/
+examples/
+```
 
-1. Deterministic validation and policy checks surround model calls.
-2. Models may recommend actions; irreversible side effects require explicit approval.
-3. Credentials are never embedded in committed workflow JSON.
-4. Large systems are decomposed into independently testable sub-workflows.
-5. Read-only integrations are preferred before write-capable adapters.
-6. Every workflow should have an observable failure mode and a recovery path.
+## Safety model
 
-## Status
+The LLM never receives an unrestricted action tool. Read/write authority is split:
 
-The autonomous system is intentionally **safe-by-default**. It can research, analyze, route, remember bounded context, inspect GitHub read-only, draft communications, and pause for human approval. Write-capable Gmail/GitHub/Calendar/Drive and chat control adapters are the next extension layer and should bind only after credentials and allowlists are configured.
+1. models research, analyze, draft, and route;
+2. an explicit request `action` envelope names one allowlisted side effect;
+3. any action forces human approval;
+4. the approval callback resumes the suspended n8n execution;
+5. a deterministic dispatcher calls exactly one narrow adapter;
+6. every adapter independently refuses execution unless `approved=true`.
+
+Natural-language requests such as “send this email” **do not send anything** unless the request also contains a valid explicit action contract and the human approves the preview.
+
+## Setup
+
+Read `docs/IMPORT_ORDER.md`, `docs/AUTONOMOUS_SYSTEM.md`, `docs/ACTIONS.md`, and `docs/SECURITY.md` before publishing workflows.
+
+No credentials, API keys, webhook secrets, or tokens are committed to this repository.

@@ -1,0 +1,11 @@
+{
+  "name":"Elite Autonomous - Drive Create Text Approved",
+  "nodes":[
+    {"parameters":{"inputSource":"workflowInputs","workflowInputs":{"values":[{"name":"approved","type":"boolean"},{"name":"request_id","type":"string"},{"name":"name","type":"string"},{"name":"content","type":"string"}]}},"id":"d1","name":"Input","type":"n8n-nodes-base.executeWorkflowTrigger","typeVersion":1.1,"position":[-520,0]},
+    {"parameters":{"mode":"runOnceForEachItem","jsCode":"if($json.approved!==true) throw new Error('Drive create requires approved=true'); const name=String($json.name||'').trim(); const content=String($json.content||''); if(!name||name.length>240) throw new Error('Invalid file name'); if(!content||content.length>500000) throw new Error('Invalid content'); return[{json:{...$json,name,content}}];"},"id":"d2","name":"Validate","type":"n8n-nodes-base.code","typeVersion":2,"position":[-280,0]},
+    {"parameters":{"resource":"file","operation":"createFromText","name":"={{ $json.name }}","content":"={{ $json.content }}"},"id":"d3","name":"Create Drive File","type":"n8n-nodes-base.googleDrive","typeVersion":3,"position":[-20,0]},
+    {"parameters":{"mode":"runOnceForEachItem","jsCode":"return[{json:{ok:true,action:'drive_create_text',request_id:$('Validate').item.json.request_id,result:$json}}];"},"id":"d4","name":"Action Result","type":"n8n-nodes-base.code","typeVersion":2,"position":[240,0]}
+  ],
+  "connections":{"Input":{"main":[[{"node":"Validate","type":"main","index":0}]]},"Validate":{"main":[[{"node":"Create Drive File","type":"main","index":0}]]},"Create Drive File":{"main":[[{"node":"Action Result","type":"main","index":0}]]}},
+  "active":false,"settings":{"executionOrder":"v1"},"meta":{"templateCredsSetupCompleted":false},"tags":[]
+}
