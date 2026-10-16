@@ -1,0 +1,9 @@
+{
+  "task": "Research current n8n compositional workflow best practices and return a production checklist.",
+  "priority": "normal",
+  "context": {
+    "deployment": "self-hosted",
+    "goal": "reliable autonomous automation"
+  },
+  "model": "gpt-6.1-sol"
+}

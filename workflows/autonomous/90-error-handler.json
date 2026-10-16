@@ -1,0 +1,52 @@
+{
+  "name": "Elite Autonomous - Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "fa947012-f99c-4f3c-9390-6aee3ac728db",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const s=$getWorkflowStaticData('global');s.errors??=[];const e={ts:new Date().toISOString(),workflow:$json.workflow?.name||null,execution_id:$json.execution?.id||null,last_node:$json.execution?.lastNodeExecuted||null,error:$json.execution?.error?.message||$json.error?.message||JSON.stringify($json.error||$json)};s.errors.push(e);if(s.errors.length>100)s.errors=s.errors.slice(-100);return[{json:{captured:true,...e,count:s.errors.length}}];"
+      },
+      "id": "f29198d0-c164-453c-a8b2-d4effcc756f5",
+      "name": "Capture Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Capture Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6d9f8db1-cb8c-41fa-b23e-5622550cfa47",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

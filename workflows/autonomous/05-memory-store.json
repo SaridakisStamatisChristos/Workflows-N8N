@@ -1,0 +1,78 @@
+{
+  "name": "Elite Autonomous - Memory Store",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "operation",
+              "type": "string"
+            },
+            {
+              "name": "request_id",
+              "type": "string"
+            },
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "value",
+              "type": "object"
+            },
+            {
+              "name": "limit",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "id": "0a87f971-7ced-4c36-9734-39ab88d71365",
+      "name": "Input",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const store = $getWorkflowStaticData('global');\nstore.records ??= [];\nstore.kv ??= {};\nconst op = String($json.operation || 'append').toLowerCase();\nconst requestId = String($json.request_id || '');\nconst key = String($json.key || requestId || 'default');\nconst limit = Math.max(1, Math.min(Number($json.limit || 50), 200));\nconst now = new Date().toISOString();\n\nif (op === 'append') {\n  const rec = { ts: now, request_id: requestId, key, value: $json.value ?? null };\n  store.records.push(rec);\n  if (store.records.length > 200) store.records = store.records.slice(-200);\n  return [{json:{ok:true, operation:op, record:rec, size:store.records.length}}];\n}\nif (op === 'put') {\n  store.kv[key] = { ts: now, value: $json.value ?? null };\n  return [{json:{ok:true, operation:op, key, value:store.kv[key]}}];\n}\nif (op === 'get') return [{json:{ok:true, operation:op, key, value:store.kv[key] ?? null}}];\nif (op === 'recent') return [{json:{ok:true, operation:op, records:store.records.slice(-limit)}}];\nif (op === 'find_request') return [{json:{ok:true, operation:op, records:store.records.filter(r=>r.request_id===requestId).slice(-limit)}}];\nreturn [{json:{ok:false,error:`Unsupported memory operation: ${op}`}}];"
+      },
+      "id": "6c292336-0795-4273-9afa-5e20e950b2d4",
+      "name": "Memory Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Input": {
+      "main": [
+        [
+          {
+            "node": "Memory Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "037e4070-b56c-48ad-aafa-dadcdab1d8a3",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,75 @@
+{
+  "name": "Elite Autonomous - Communications Specialist",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {"values": [
+          {"name":"request_id","type":"string"},
+          {"name":"task","type":"string"},
+          {"name":"context","type":"object"},
+          {"name":"model","type":"string"}
+        ]}
+      },
+      "id":"0f48a038-5e0f-4cdc-8be8-0278d3d7e180",
+      "name":"Input",
+      "type":"n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion":1.1,
+      "position":[-700,0]
+    },
+    {
+      "parameters": {
+        "mode":"runOnceForEachItem",
+        "jsCode":"const model = $json.model || 'gpt-6.1-sol';\nconst payload = {\n  model,\n  instructions: \"You are the Communications Specialist in an autonomous n8n system. Draft high-quality messages, email copy, briefs, or stakeholder communications, but never send them. Return STRICT JSON only with keys: specialist, status, summary_markdown, draft, channel, audience, risks, risk_level, requires_human_approval, confidence. specialist must be communications. Set requires_human_approval=true for any send/publish intent.\",\n  input: JSON.stringify({request_id:$json.request_id,task:$json.task,context:$json.context||{}}),\n  reasoning: {effort:'high'},\n  max_output_tokens: 4200,\n  store:false\n};\n\nreturn [{json:{...$json,openai_payload:payload}}];"
+      },
+      "id":"19b41ce6-db11-4778-90ef-c2d246a032d2",
+      "name":"Build Payload",
+      "type":"n8n-nodes-base.code",
+      "typeVersion":2,
+      "position":[-450,0]
+    },
+    {
+      "parameters": {
+        "method":"POST",
+        "url":"https://api.openai.com/v1/responses",
+        "authentication":"genericCredentialType",
+        "genericAuthType":"httpBearerAuth",
+        "sendBody":true,
+        "contentType":"json",
+        "specifyBody":"json",
+        "jsonBody":"={{ JSON.stringify($json.openai_payload) }}",
+        "options":{"timeout":120000,"response":{"response":{"responseFormat":"json"}}}
+      },
+      "id":"0e162a3b-6048-4cde-b37a-859623a21236",
+      "name":"OpenAI Responses",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.2,
+      "position":[-170,0],
+      "retryOnFail":true,
+      "maxTries":3,
+      "waitBetweenTries":3000,
+      "continueOnFail":true
+    },
+    {
+      "parameters": {
+        "mode":"runOnceForEachItem",
+        "jsCode":"function textOf(r){if(typeof r?.output_text==='string'&&r.output_text.trim())return r.output_text.trim();for(const x of (r?.output||[]))for(const c of (x?.content||[]))if(typeof c?.text==='string'&&c.text.trim())return c.text.trim();return null;}\nfunction parse(t){if(!t)return null;const s=t.replace(/^```(?:json)?\\s*/i,'').replace(/\\s*```$/,'').trim();try{return JSON.parse(s)}catch{}const a=s.indexOf('{'),b=s.lastIndexOf('}');if(a>=0&&b>a)try{return JSON.parse(s.slice(a,b+1))}catch{}return null;}\nif($json.error)return [{json:{ok:false,error:String($json.error.message||$json.error),stage:'openai'}}];\nconst raw=textOf($json); const out=parse(raw); return [{json:out?{ok:true,...out}:{ok:false,error:'Model output was not valid JSON',raw}}];"
+      },
+      "id":"419c0733-5f89-4c89-b213-436aef3ebfe6",
+      "name":"Parse Contract",
+      "type":"n8n-nodes-base.code",
+      "typeVersion":2,
+      "position":[110,0]
+    }
+  ],
+  "connections":{
+    "Input":{"main":[[{"node":"Build Payload","type":"main","index":0}]]},
+    "Build Payload":{"main":[[{"node":"OpenAI Responses","type":"main","index":0}]]},
+    "OpenAI Responses":{"main":[[{"node":"Parse Contract","type":"main","index":0}]]}
+  },
+  "active":false,
+  "settings":{"executionOrder":"v1"},
+  "versionId":"6851f33a-4a4a-4947-83e2-1c1adf26019c",
+  "meta":{"templateCredsSetupCompleted":false},
+  "tags":[]
+}
