@@ -147,7 +147,12 @@ jobs:
           SANDBOX_ARGS=()
           if [ "$IS_RELAYFORGE" = "true" ]; then
             VERIFICATION_CONFIG="$GITHUB_WORKSPACE/target/.agent/verification.yaml"
-            SANDBOX_ARGS=(--sandbox-image relayforge-verifier:node22-pnpm10)
+            SANDBOX_ARGS=(
+              --sandbox-image relayforge-verifier:node22-pnpm10
+              --sandbox-cap-add CHOWN
+              --sandbox-cap-add SETUID
+              --sandbox-cap-add SETGID
+            )
           fi
           cd "$GITHUB_WORKSPACE/control-plane"
           python -m agentic_engineering.campaign \
