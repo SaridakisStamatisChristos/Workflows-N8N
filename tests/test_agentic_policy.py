@@ -22,44 +22,30 @@ BASE_TASK = {
 
 class PolicyTests(unittest.TestCase):
     def test_requires_explicit_auto_label(self):
-        task = dict(BASE_TASK, labels=[])
-        self.assertFalse(classify_issue(task, POLICY).allowed)
-
+        self.assertFalse(classify_issue(dict(BASE_TASK, labels=[]), POLICY).allowed)
     def test_sensitive_issue_requires_review(self):
-        task = dict(BASE_TASK, description="Change authentication behavior")
-        result = classify_issue(task, POLICY)
-        self.assertTrue(result.allowed)
-        self.assertTrue(result.requires_human_review)
-
-    def test_path_traversal_is_denied(self):
-        self.assertFalse(classify_path("../host-secret", BASE_TASK, POLICY).allowed)
-
-    def test_task_forbidden_path_is_denied(self):
-        self.assertFalse(classify_path("src/forbidden/x.py", BASE_TASK, POLICY).allowed)
-
-    def test_outside_allowlist_is_denied(self):
-        self.assertFalse(classify_path("tests/test_x.py", BASE_TASK, POLICY).allowed)
-
+        result = classify_issue(dict(BASE_TASK, description="Change authentication behavior"), POLICY)
+        self.assertTrue(result.allowed); self.assertTrue(result.requires_human_review)
+    def test_path_traversal_is_denied(self): self.assertFalse(classify_path("../host-secret", BASE_TASK, POLICY).allowed)
+    def test_task_forbidden_path_is_denied(self): self.assertFalse(classify_path("src/forbidden/x.py", BASE_TASK, POLICY).allowed)
+    def test_outside_allowlist_is_denied(self): self.assertFalse(classify_path("tests/test_x.py", BASE_TASK, POLICY).allowed)
     def test_guardrail_path_is_denied_even_if_task_claims_it(self):
-        task = dict(BASE_TASK, allowed_paths=[".agent/**"])
-        self.assertFalse(classify_path(".agent/policy.yaml", task, POLICY).allowed)
-
-    def test_root_auth_path_is_denied(self):
+        self.assertFalse(classify_path(".agent/policy.yaml", dict(BASE_TASK, allowed_paths=[".agent/**"]), POLICY).allowed)
+    def test_git_control_state_is_denied(self):
         task = dict(BASE_TASK, allowed_paths=["**"])
-        self.assertFalse(classify_path("auth/handler.py", task, POLICY).allowed)
-
+        self.assertFalse(classify_path(".git/config", task, POLICY).allowed)
+        self.assertFalse(classify_path(".gitignore", task, POLICY).allowed)
+        self.assertFalse(classify_path(".gitattributes", task, POLICY).allowed)
+    def test_hidden_guardrail_path_remains_protected_under_global_allow(self):
+        self.assertFalse(classify_path(".agent/policy.yaml", dict(BASE_TASK, allowed_paths=["**"]), POLICY).allowed)
+    def test_root_auth_path_is_denied(self):
+        self.assertFalse(classify_path("auth/handler.py", dict(BASE_TASK, allowed_paths=["**"]), POLICY).allowed)
     def test_change_set_task_id_must_match(self):
-        with self.assertRaises(ContractError):
-            validate_change_set({"task_id": "other", "operations": []}, "T-1")
-
+        with self.assertRaises(ContractError): validate_change_set({"task_id": "other", "operations": []}, "T-1")
     def test_normalize_rejects_bad_repository(self):
-        with self.assertRaises(ContractError):
-            normalize_task(dict(BASE_TASK, repository="not-a-repo"))
-
+        with self.assertRaises(ContractError): normalize_task(dict(BASE_TASK, repository="not-a-repo"))
     def test_evaluate_safe_paths(self):
         result = evaluate_paths(["src/a.py", "src/b.py"], BASE_TASK, POLICY)
-        self.assertTrue(result.allowed)
-        self.assertFalse(result.requires_human_review)
+        self.assertTrue(result.allowed); self.assertFalse(result.requires_human_review)
 
-if __name__ == "__main__":
-    unittest.main()
+if __name__ == "__main__": unittest.main()

@@ -1,56 +1,38 @@
 {
   "version": 1,
   "authorization": {
-    "auto_task_labels": [
-      "agent:auto"
-    ],
+    "auto_task_labels": ["agent:auto"],
     "models_may_authorize": false,
     "publish_mode": "draft_pr_only",
     "allow_merge": false
   },
-  "repositories": {
-    "allowlist": [
-      "SaridakisStamatisChristos/Workflows-N8N"
-    ]
-  },
+  "repositories": {"allowlist": ["SaridakisStamatisChristos/Workflows-N8N"]},
   "sensitive_terms": {
-    "blocked": [
-      "production secret",
-      "deployment credential",
-      "rotate secret",
-      "delete production data"
-    ],
-    "review_required": [
-      "auth",
-      "authentication",
-      "authorization",
-      "billing",
-      "permission",
-      "permissions",
-      "secret",
-      "secrets",
-      "production data",
-      "credential",
-      "credentials"
-    ]
+    "blocked": ["production secret", "deployment credential", "rotate secret", "delete production data"],
+    "review_required": ["auth", "authentication", "authorization", "billing", "permission", "permissions", "secret", "secrets", "production data", "credential", "credentials"]
   },
   "sensitive_paths": [
-    {"pattern":".agent/**","risk":"critical","agent_write":false,"reason":"agent guardrails are immutable to the agent"},
-    {"pattern":"scripts/validate_workflows.py","risk":"critical","agent_write":false,"reason":"primary workflow safety validator"},
-    {"pattern":"scripts/test_contracts.py","risk":"critical","agent_write":false,"reason":"primary platform contract oracle"},
-    {"pattern":"agentic_engineering/**","risk":"critical","agent_write":false,"reason":"sandbox and policy enforcement implementation"},
-    {"pattern":".github/workflows/**","risk":"high","agent_write":"review_required","reason":"CI and execution authority"},
-    {"pattern":"workflows/actions/**","risk":"high","agent_write":"review_required","reason":"external mutation adapters"},
-    {"pattern":"**/auth/**","risk":"critical","agent_write":false,"reason":"authentication surface"},
-    {"pattern":"**/billing/**","risk":"critical","agent_write":false,"reason":"billing surface"},
-    {"pattern":"**/permissions/**","risk":"high","agent_write":"review_required","reason":"authorization surface"},
-    {"pattern":"auth/**","risk":"critical","agent_write":false,"reason":"root authentication surface"},
-    {"pattern":"billing/**","risk":"critical","agent_write":false,"reason":"root billing surface"},
-    {"pattern":"permissions/**","risk":"high","agent_write":"review_required","reason":"root authorization surface"}
+    {"pattern": ".git", "risk": "critical", "agent_write": false, "reason": "Git control state must never be agent-writable"},
+    {"pattern": ".git/**", "risk": "critical", "agent_write": false, "reason": "Git control state must never be agent-writable"},
+    {"pattern": ".gitmodules", "risk": "critical", "agent_write": false, "reason": "Git publication metadata must never be agent-writable"},
+    {"pattern": ".gitattributes", "risk": "critical", "agent_write": false, "reason": "Git publication metadata must never be agent-writable"},
+    {"pattern": ".gitignore", "risk": "critical", "agent_write": false, "reason": "Git publication metadata must never be agent-writable"},
+    {"pattern": ".agent/**", "risk": "critical", "agent_write": false, "reason": "agent guardrails are immutable to the agent"},
+    {"pattern": "scripts/validate_workflows.py", "risk": "critical", "agent_write": false, "reason": "primary workflow safety validator"},
+    {"pattern": "scripts/test_contracts.py", "risk": "critical", "agent_write": false, "reason": "primary platform contract oracle"},
+    {"pattern": "agentic_engineering/**", "risk": "critical", "agent_write": false, "reason": "sandbox and policy enforcement implementation"},
+    {"pattern": ".github/workflows/**", "risk": "high", "agent_write": "review_required", "reason": "CI and execution authority"},
+    {"pattern": "workflows/actions/**", "risk": "high", "agent_write": "review_required", "reason": "external mutation adapters"},
+    {"pattern": "**/auth/**", "risk": "critical", "agent_write": false, "reason": "authentication surface"},
+    {"pattern": "**/billing/**", "risk": "critical", "agent_write": false, "reason": "billing surface"},
+    {"pattern": "**/permissions/**", "risk": "high", "agent_write": "review_required", "reason": "authorization surface"},
+    {"pattern": "auth/**", "risk": "critical", "agent_write": false, "reason": "root authentication surface"},
+    {"pattern": "billing/**", "risk": "critical", "agent_write": false, "reason": "root billing surface"},
+    {"pattern": "permissions/**", "risk": "high", "agent_write": "review_required", "reason": "root authorization surface"}
   ],
   "sandbox": {
     "max_files_changed": 40,
-    "max_file_bytes": 1048576,
+    "max_file_bytes": 50000,
     "max_runtime_seconds": 900,
     "max_repair_attempts": 2,
     "network": "none",
