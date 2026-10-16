@@ -1,0 +1,14 @@
+{
+  "task": "Create the approved issue after review",
+  "request_id": "example_github_issue_001",
+  "action": {
+    "type": "github_issue_create",
+    "payload": {
+      "owner": "OWNER",
+      "repo": "REPO",
+      "title": "Example issue",
+      "body": "Approved issue body"
+    }
+  },
+  "priority": "normal"
+}

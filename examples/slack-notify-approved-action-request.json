@@ -1,0 +1,12 @@
+{
+  "task": "Send the approved Slack notification",
+  "request_id": "example_slack_001",
+  "action": {
+    "type": "slack_notify",
+    "payload": {
+      "channel_id": "C0123456789",
+      "text": "Approved notification"
+    }
+  },
+  "priority": "normal"
+}

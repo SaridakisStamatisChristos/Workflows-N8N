@@ -1,64 +1,71 @@
-# Elite Autonomous n8n System v2
+# Elite Autonomous n8n System v3
 
-## Architecture
+## Control plane
 
 ```text
 Authenticated Command Webhook
-  → deterministic input/action validation
-  → bounded memory recall
-  → OpenAI router
-  → one specialist
-      research | engineering | communications | GitHub read-only | general
-  → deterministic policy gate
-      → no approval needed: persist + HTTP 200
-      → approval/action present: HTTP 202 + signed resume URL
-          → Wait up to 24h
-          → human approve/reject
-          → if approved action exists
-              → deterministic action dispatcher
-              → Gmail | Calendar | Drive | Telegram adapter
-              → persist action result
+  -> normalize + explicit action validation
+  -> memory recall
+  -> OpenAI route selection
+  -> one specialist
+  -> deterministic policy gate
+       -> ready: persist + HTTP 200
+       -> approval needed: HTTP 202 + signed resume URL
+            -> human decision
+            -> deterministic dispatcher
+            -> idempotency claim
+            -> one narrow write adapter
+            -> completion ledger
+            -> persist action result
 ```
 
 ## Specialists
 
-### Research
-Uses the OpenAI Responses API with built-in web search. It separates findings/sources and cannot execute external side effects.
+- Research: Responses API with web search, evidence-oriented output.
+- Engineering: implementation, risk, tests, and verification planning.
+- Communications: drafts only; send/publish authority remains outside the model.
+- GitHub read-only: repository metadata/file analysis without mutation.
+- General fallback: bounded response when no specialist route is appropriate.
 
-### Engineering
-Produces implementation plans, tests, risks, and verification steps. It cannot claim repository changes unless evidence is supplied.
+## Persistence backends
 
-### Communications
-Drafts messages/briefs. Sending remains a separate approved action.
+The command center and dispatcher refer only to workflow contracts, not storage implementation details.
 
-### GitHub read-only
-Validates `owner/repo`, fetches repository metadata plus one requested path through GitHub REST, and analyzes the supplied data. No GitHub write endpoint exists in this specialist.
+Portable backend:
+- workflow static-data memory;
+- workflow static-data action ledger.
 
-## Memory
+Durable backend:
+- Postgres memory events + KV store;
+- Postgres action ledger with primary-key claims.
 
-The portable default uses `$getWorkflowStaticData('global')` inside the dedicated memory sub-workflow. It implements append/put/get/recent/find_request and caps the event ring buffer at 200 entries.
+This makes the storage layer replaceable without changing the command-center request or action contracts.
 
-For large or multi-instance deployments, replace the memory implementation behind the same workflow contract with Postgres/Redis/vector storage.
+## Operators
 
-## Write authority
+Telegram and Slack can act as direct n8n operator surfaces.
 
-Write authority is deliberately separated from reasoning. An LLM does not get arbitrary HTTP, shell, Gmail, Calendar, Drive, Telegram, or GitHub-write tools.
+Discord requires a small upstream interaction/message relay because n8n currently has a native Discord output node but no native Discord Trigger. The relay verifies Discord authenticity, then forwards a normalized message over Header Auth.
 
-An external caller must provide an explicit allowlisted `action.type` and payload. The command center forces approval whenever an action exists. The approval preview contains the resolved action. Only after the signed resume callback receives `approved=true` can the deterministic dispatcher call a narrow write adapter.
+All operator surfaces converge on the same command-center contract.
 
-Every adapter repeats the `approved=true` invariant and validates its own payload. This is defense in depth against routing/wiring mistakes.
+## Scheduled autonomy
 
-## Operator control
+`70-daily-autonomous-brief.json` runs a read-only daily brief through the command center. It deliberately omits an action envelope, so it cannot mutate external systems.
 
-The primary API is the authenticated command webhook. `workflows/operators/60-telegram-command-gateway.json` provides a Telegram front-end with a fixed chat allowlist and forwards commands through authenticated HTTP to the command center.
+Create further recurring jobs by following the same pattern: fixed task + fixed context + no side effect unless a separately reviewed action workflow is intentionally added.
 
-## Reliability and recovery
+## Observability
 
-- external calls use retry/timeout controls where appropriate;
-- malformed model output is contract-checked;
-- `90-error-handler.json` captures a bounded error ring buffer;
-- `91-recovery-advisor.json` classifies failures and proposes bounded remediation, but does not mutate workflows or automatically retry non-idempotent actions.
+- `80-health-check.json` verifies OpenAI and GitHub credential/connectivity paths and returns 200/503.
+- `81-postgres-metrics.json` reports memory-event and action-ledger counts, including stale claimed actions.
 
-## Deliberate boundaries
+The metrics endpoint is authenticated because operational state is not intended to be public.
 
-The system does not provide arbitrary shell execution, unrestricted URL fetching as an action tool, financial transfers, permission/credential mutation, or automatic publishing/deletion. Add new actions as separately reviewed allowlisted adapters rather than expanding the model's raw authority.
+## Error recovery
+
+The error handler captures failures. The recovery advisor may classify retryability and recommend repair, but it does not silently mutate workflows or replay non-idempotent provider actions.
+
+## Deployment claim
+
+Repository CI validates structure, safety invariants, and cross-workflow contracts. It does not prove that a particular n8n instance has the right credentials, provider permissions, workflow IDs, network access, or runtime node versions. Production readiness therefore requires the smoke tests in `docs/TESTING.md`.

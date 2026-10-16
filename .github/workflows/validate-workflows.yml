@@ -18,3 +18,5 @@ jobs:
           python-version: '3.12'
       - name: Validate workflow exports
         run: python scripts/validate_workflows.py
+      - name: Verify platform contracts
+        run: python scripts/test_contracts.py

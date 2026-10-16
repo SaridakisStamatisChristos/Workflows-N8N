@@ -7,68 +7,86 @@ Production-oriented n8n workflows, reusable automation systems, and bounded auto
 ### Elite AI Ops Orchestrator
 `workflows/core/elite-ai-ops-orchestrator.json`
 
-Authenticated webhook → validation → planner → adversarial critic → final synthesis → deterministic approval gate.
+Authenticated webhook → deterministic validation → planner → adversarial critic → final synthesis → policy/approval gate.
 
-### Elite Autonomous System v2
+### Elite Autonomous System v3
 `workflows/autonomous/00-autonomous-command-center.json`
 
 A compositional control plane with:
 
-- bounded persistent memory;
-- AI routing into independent specialists;
-- current-web research through OpenAI Responses web search;
-- engineering analysis and verification planning;
-- communications drafting;
-- read-only GitHub inspection;
-- deterministic risk policy;
-- signed human approval/resume flow;
-- explicit approved-action contracts;
-- Gmail, Google Calendar, Google Drive, and Telegram write adapters;
-- Telegram operator gateway;
-- centralized error capture and bounded recovery analysis.
+- bounded memory and interchangeable persistence backends;
+- AI routing into independent research, engineering, communications, GitHub, and general specialists;
+- OpenAI Responses API + current-web research;
+- deterministic risk and human-approval policy;
+- idempotent approved-action execution;
+- Gmail, Google Calendar, Google Drive, Telegram, Slack, Discord, and GitHub write adapters;
+- Telegram and Slack direct operator gateways;
+- authenticated Discord relay gateway;
+- scheduled autonomous read-only briefs;
+- dependency health checks and Postgres operations metrics;
+- centralized error capture and bounded recovery advice;
+- structural, safety, and contract CI.
 
 ## Repository layout
 
 ```text
 workflows/
   core/
-    elite-ai-ops-orchestrator.json
   autonomous/
-    00-autonomous-command-center.json
-    05-memory-store.json
-    10-research-specialist.json
-    20-engineering-specialist.json
-    30-communications-specialist.json
-    35-github-readonly-specialist.json
-    90-error-handler.json
-    91-recovery-advisor.json
   actions/
-    50-approved-action-dispatcher.json
-    51-gmail-send-approved.json
-    52-calendar-create-approved.json
-    53-drive-create-text-approved.json
-    54-telegram-notify-approved.json
   operators/
-    60-telegram-command-gateway.json
+  storage/
+  schedules/
+  observability/
 docs/
 examples/
+scripts/
+.github/workflows/
 ```
 
 ## Safety model
 
-The LLM never receives an unrestricted action tool. Read/write authority is split:
+The LLM never receives unrestricted write authority.
 
 1. models research, analyze, draft, and route;
-2. an explicit request `action` envelope names one allowlisted side effect;
-3. any action forces human approval;
-4. the approval callback resumes the suspended n8n execution;
-5. a deterministic dispatcher calls exactly one narrow adapter;
-6. every adapter independently refuses execution unless `approved=true`.
+2. a caller must provide an explicit allowlisted `action` envelope for a side effect;
+3. any action forces a human-approval wait;
+4. the signed n8n resume webhook resumes only after the operator decision;
+5. the deterministic dispatcher claims an idempotency key before execution;
+6. exactly one narrow action adapter runs;
+7. each adapter independently requires `approved=true`;
+8. the completion ledger records the result using the original claimed key.
 
-Natural-language requests such as “send this email” **do not send anything** unless the request also contains a valid explicit action contract and the human approves the preview.
+Natural-language intent such as “send this email” does **not** send anything by itself.
 
-## Setup
+## Persistence
 
-Read `docs/IMPORT_ORDER.md`, `docs/AUTONOMOUS_SYSTEM.md`, `docs/ACTIONS.md`, and `docs/SECURITY.md` before publishing workflows.
+Two interchangeable implementations preserve the same workflow contracts:
 
-No credentials, API keys, webhook secrets, or tokens are committed to this repository.
+- portable/default: `05-memory-store.json` + `55-action-ledger.json` using workflow static data;
+- durable: `06-postgres-memory-store.json` + `56-postgres-action-ledger.json`.
+
+Use Postgres for multi-worker, restart-resistant, or higher-volume deployments.
+
+## Operator surfaces
+
+- Telegram: native trigger.
+- Slack: native Slack Trigger; configure a Slack signing secret and explicit user/channel allowlists.
+- Discord: n8n has no native Discord Trigger, so the repository uses a Header-Auth relay contract. The upstream relay must verify Discord's request signature before forwarding a normalized event.
+
+## Validation
+
+```bash
+python scripts/validate_workflows.py
+python scripts/test_contracts.py
+```
+
+The same checks run in GitHub Actions on every push to `main` and every pull request.
+
+## Deployment status
+
+The repository exports are structurally and contract validated. They still require instance-specific n8n workflow-ID bindings, credentials, allowlists, URLs, and runtime smoke tests before production publication.
+
+Start with `docs/IMPORT_ORDER.md`, then read `docs/AUTONOMOUS_SYSTEM.md`, `docs/ACTIONS.md`, `docs/SECURITY.md`, and `docs/TESTING.md`.
+
+No API keys, OAuth secrets, webhook secrets, passwords, or tokens are committed to this repository.

@@ -1,29 +1,60 @@
 # Security Model
 
-## Threat model
+## Trust boundaries
 
-Webhook inputs, model outputs, fetched content, and chat messages are untrusted. Primary risks include prompt injection, malformed payloads, credential disclosure, SSRF-style arbitrary HTTP behavior, duplicated side effects, and over-broad autonomous authority.
+1. Command API ingress — Header Auth.
+2. Human approval resume webhook — separate Header Auth.
+3. Slack ingress — Slack Trigger plus Slack signing secret and explicit user/channel allowlists.
+4. Discord ingress — Header-Auth relay only; the upstream relay must verify Discord's Ed25519 request signature.
+5. Provider credentials — stored only in n8n Credentials.
+6. Model boundary — models receive analysis context but not unrestricted write tools.
 
-## Controls
+## Side effects
 
-- Authenticate command ingress with n8n Header Auth.
-- Use an explicit Telegram chat allowlist in the Telegram gateway.
-- Validate lengths, identifiers, routes, dates, and action types deterministically.
-- Store secrets only in n8n Credentials; never commit API keys/tokens/webhook secrets.
-- Prefer least-privilege/read-only credentials where possible.
-- Keep GitHub analysis read-only.
-- Never pass raw credential material into prompts.
-- Do not expose arbitrary shell or arbitrary destination URLs to model-generated tool calls.
-- Force every explicit side-effect action through human approval.
-- Repeat the `approved=true` check inside every action adapter.
-- Keep write adapters narrow: one capability, explicit schema, bounded input.
-- Cap persistent workflow memory and error history.
-- Treat recovery recommendations as proposals; automatic retry is appropriate only for clearly transient, idempotent operations.
+A side effect requires all of the following:
 
-## Action idempotency
+- an allowlisted explicit `action.type`;
+- a deterministic payload validator;
+- a human approval decision;
+- a successful idempotency claim;
+- a narrow provider adapter;
+- an adapter-local `approved=true` guard.
 
-The current adapters enforce approval and validation but do not yet provide provider-level idempotency guarantees for every service. Before high-volume production use, add a durable action ledger keyed by `request_id + action_type`, reject duplicate completed actions, and record provider result IDs. This is the next reliability hardening target.
+Natural-language instructions cannot select an arbitrary HTTP endpoint, shell command, filesystem path, or credential.
 
-## Deliberate exclusions
+## GitHub writes
 
-Autonomous arbitrary shell execution, unrestricted generic HTTP actions, automatic money movement, credential/permission mutation, destructive deletion, and silent publishing are outside the core system.
+The GitHub adapter is pinned to the GitHub REST repository host. File updates require the current blob SHA to reduce lost-update risk. Use a dedicated token scoped only to the repositories and operations required.
+
+## Idempotency
+
+The dispatcher claims `request_id:action_type` before executing a side effect. Repeated attempts with the same key are suppressed.
+
+The default static ledger is portable but workflow-instance-local. The Postgres ledger uses a primary-key claim and is the recommended backend for multi-worker/restart-resistant deployments.
+
+An ambiguous provider failure leaves the claim in place. Do not automatically reset and replay non-idempotent writes.
+
+## Storage
+
+The Postgres workflows use positional query parameters (`$1`, `$2`, ...) and n8n `queryReplacement` rather than interpolating user data into SQL.
+
+## Operator allowlists
+
+The Telegram, Slack, and Discord gateways are intentionally deny-by-default. Replace placeholder IDs with explicit operator principals before activation.
+
+## Prohibited authority expansion
+
+The autonomous/action layers intentionally avoid:
+
+- Execute Command / arbitrary shell;
+- arbitrary user-supplied action URLs;
+- automatic permission or credential mutation;
+- financial transfers;
+- silent deletion/publishing;
+- automatic replay of uncertain writes.
+
+Add new powers as separately reviewed allowlisted adapters.
+
+## Public repository hygiene
+
+CI scans common token formats. This is a backstop, not a substitute for secret scanning and credential rotation. Never commit exported credentials or hardcoded tokens.
