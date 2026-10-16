@@ -17,7 +17,7 @@ def sha256_file(path: Path) -> str:
 def snapshot(root: Path) -> dict[str, str]:
     result: dict[str, str] = {}
     for path in sorted(root.rglob("*")):
-        if not path.is_file() or ".git" in path.parts or "__pycache__" in path.parts:
+        if path.is_symlink() or not path.is_file() or ".git" in path.parts or "__pycache__" in path.parts:
             continue
         rel = path.relative_to(root).as_posix()
         result[rel] = sha256_file(path)
@@ -38,27 +38,14 @@ def render_pr_body(evidence: dict[str, Any]) -> str:
     judgement = evidence.get("human_judgment_required", [])
     judgement_lines = [f"- {x}" for x in judgement] or ["- Standard code review"]
     level = evidence.get("verification_level", "UNVERIFIED")
-    return "\n".join(
-        [
-            "## Agent-generated draft PR evidence",
-            "",
-            f"**Verification level:** `{level}`",
-            "",
-            "### Changed files",
-            *(changed or ["- No file changes recorded"]),
-            "",
-            "### Verification",
-            *(test_lines or ["- No verification commands recorded"]),
-            "",
-            "### Known failures",
-            *failure_lines,
-            "",
-            "### Human judgment required",
-            *judgement_lines,
-            "",
-            "> This artifact contains conclusions and verification evidence, not private chain-of-thought.",
-        ]
-    )
+    return "\n".join([
+        "## Agent-generated draft PR evidence", "", f"**Verification level:** `{level}`", "",
+        "### Changed files", *(changed or ["- No file changes recorded"]), "",
+        "### Verification", *(test_lines or ["- No verification commands recorded"]), "",
+        "### Known failures", *failure_lines, "",
+        "### Human judgment required", *judgement_lines, "",
+        "> This artifact contains conclusions and verification evidence, not private chain-of-thought.",
+    ])
 
 
 def write_evidence(path: Path, evidence: dict[str, Any]) -> None:

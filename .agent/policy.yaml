@@ -1,7 +1,9 @@
 {
   "version": 1,
   "authorization": {
-    "auto_task_labels": ["agent:auto"],
+    "auto_task_labels": [
+      "agent:auto"
+    ],
     "models_may_authorize": false,
     "publish_mode": "draft_pr_only",
     "allow_merge": false
@@ -33,15 +35,18 @@
     ]
   },
   "sensitive_paths": [
-    {"pattern": ".agent/**", "risk": "critical", "agent_write": false, "reason": "agent guardrails are immutable to the agent"},
-    {"pattern": "scripts/validate_workflows.py", "risk": "critical", "agent_write": false, "reason": "primary workflow safety validator"},
-    {"pattern": "scripts/test_contracts.py", "risk": "critical", "agent_write": false, "reason": "primary platform contract oracle"},
-    {"pattern": "agentic_engineering/**", "risk": "critical", "agent_write": false, "reason": "sandbox and policy enforcement implementation"},
-    {"pattern": ".github/workflows/**", "risk": "high", "agent_write": "review_required", "reason": "CI and execution authority"},
-    {"pattern": "workflows/actions/**", "risk": "high", "agent_write": "review_required", "reason": "external mutation adapters"},
-    {"pattern": "**/auth/**", "risk": "critical", "agent_write": false, "reason": "authentication surface"},
-    {"pattern": "**/billing/**", "risk": "critical", "agent_write": false, "reason": "billing surface"},
-    {"pattern": "**/permissions/**", "risk": "high", "agent_write": "review_required", "reason": "authorization surface"}
+    {"pattern":".agent/**","risk":"critical","agent_write":false,"reason":"agent guardrails are immutable to the agent"},
+    {"pattern":"scripts/validate_workflows.py","risk":"critical","agent_write":false,"reason":"primary workflow safety validator"},
+    {"pattern":"scripts/test_contracts.py","risk":"critical","agent_write":false,"reason":"primary platform contract oracle"},
+    {"pattern":"agentic_engineering/**","risk":"critical","agent_write":false,"reason":"sandbox and policy enforcement implementation"},
+    {"pattern":".github/workflows/**","risk":"high","agent_write":"review_required","reason":"CI and execution authority"},
+    {"pattern":"workflows/actions/**","risk":"high","agent_write":"review_required","reason":"external mutation adapters"},
+    {"pattern":"**/auth/**","risk":"critical","agent_write":false,"reason":"authentication surface"},
+    {"pattern":"**/billing/**","risk":"critical","agent_write":false,"reason":"billing surface"},
+    {"pattern":"**/permissions/**","risk":"high","agent_write":"review_required","reason":"authorization surface"},
+    {"pattern":"auth/**","risk":"critical","agent_write":false,"reason":"root authentication surface"},
+    {"pattern":"billing/**","risk":"critical","agent_write":false,"reason":"root billing surface"},
+    {"pattern":"permissions/**","risk":"high","agent_write":"review_required","reason":"root authorization surface"}
   ],
   "sandbox": {
     "max_files_changed": 40,
@@ -51,6 +56,7 @@
     "network": "none",
     "memory": "768m",
     "cpus": "1.0",
-    "pids_limit": 128
+    "pids_limit": 128,
+    "max_change_set_chars": 60000
   }
 }

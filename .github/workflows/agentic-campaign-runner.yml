@@ -53,6 +53,9 @@ jobs:
           task_id = os.environ['INPUT_TASK_ID']
           if task.get('task_id') != task_id or change.get('task_id') != task_id:
               raise SystemExit('task_id mismatch across workflow-dispatch contracts')
+          payload_chars = len(os.environ['TASK_JSON']) + len(os.environ['CHANGE_SET_JSON']) + len(task_id)
+          if payload_chars > 60000:
+              raise SystemExit('workflow-dispatch contract exceeds 60000-character safety budget')
           (temp / 'agent-task.json').write_text(json.dumps(task), encoding='utf-8')
           (temp / 'agent-change-set.json').write_text(json.dumps(change), encoding='utf-8')
           PY

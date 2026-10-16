@@ -77,18 +77,10 @@ def run_command_local(workspace: Path, command: str, timeout: int) -> dict[str, 
     started = time.monotonic()
     try:
         proc = subprocess.run(
-            ["bash", "-lc", command],
-            cwd=workspace,
-            env=_sanitized_env(workspace / ".home"),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            timeout=timeout,
-            check=False,
+            ["bash", "-lc", command], cwd=workspace, env=_sanitized_env(workspace / ".home"),
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout, check=False,
         )
-        status = "passed" if proc.returncode == 0 else "failed"
-        output = proc.stdout[-12000:]
-        return {"command": command, "status": status, "exit_code": proc.returncode, "output": output, "duration_seconds": round(time.monotonic() - started, 3)}
+        return {"command": command, "status": "passed" if proc.returncode == 0 else "failed", "exit_code": proc.returncode, "output": proc.stdout[-12000:], "duration_seconds": round(time.monotonic() - started, 3)}
     except subprocess.TimeoutExpired as exc:
         output = ((exc.stdout or "") + (exc.stderr or ""))[-12000:] if isinstance(exc.stdout, str) else ""
         return {"command": command, "status": "failed", "exit_code": 124, "output": output, "duration_seconds": round(time.monotonic() - started, 3), "failure": "timeout"}
@@ -97,49 +89,29 @@ def run_command_local(workspace: Path, command: str, timeout: int) -> dict[str, 
 def run_command_docker(workspace: Path, command: str, timeout: int, policy: dict[str, Any], image: str = "python:3.12-slim") -> dict[str, Any]:
     sandbox = policy.get("sandbox", {})
     args = [
-        "docker", "run", "--rm",
-        "--network", "none",
-        "--cap-drop", "ALL",
-        "--security-opt", "no-new-privileges",
-        "--pids-limit", str(sandbox.get("pids_limit", 128)),
-        "--memory", str(sandbox.get("memory", "768m")),
-        "--cpus", str(sandbox.get("cpus", "1.0")),
-        "--read-only",
-        "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
-        "-v", f"{workspace.resolve()}:/workspace:rw",
-        "-w", "/workspace",
-        "-e", "PYTHONDONTWRITEBYTECODE=1",
-        image,
-        "sh", "-lc", command,
+        "docker", "run", "--rm", "--network", "none", "--cap-drop", "ALL",
+        "--security-opt", "no-new-privileges", "--pids-limit", str(sandbox.get("pids_limit", 128)),
+        "--memory", str(sandbox.get("memory", "768m")), "--cpus", str(sandbox.get("cpus", "1.0")),
+        "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
+        "-v", f"{workspace.resolve()}:/workspace:rw", "-w", "/workspace", "-e", "PYTHONDONTWRITEBYTECODE=1",
+        image, "sh", "-lc", command,
     ]
     started = time.monotonic()
     try:
         proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout, check=False)
-        return {
-            "command": command,
-            "status": "passed" if proc.returncode == 0 else "failed",
-            "exit_code": proc.returncode,
-            "output": proc.stdout[-12000:],
-            "duration_seconds": round(time.monotonic() - started, 3),
-            "sandbox": {"mode": "docker", "image": image, "network": "none"},
-        }
+        return {"command": command, "status": "passed" if proc.returncode == 0 else "failed", "exit_code": proc.returncode, "output": proc.stdout[-12000:], "duration_seconds": round(time.monotonic() - started, 3), "sandbox": {"mode": "docker", "image": image, "network": "none"}}
     except subprocess.TimeoutExpired as exc:
         output = exc.stdout[-12000:] if isinstance(exc.stdout, str) else ""
         return {"command": command, "status": "failed", "exit_code": 124, "output": output, "duration_seconds": round(time.monotonic() - started, 3), "failure": "timeout", "sandbox": {"mode": "docker", "image": image, "network": "none"}}
 
 
-def execute_campaign(
-    source: Path,
-    task: dict[str, Any],
-    change_set: dict[str, Any],
-    policy: dict[str, Any],
-    verification_commands: list[str],
-    *,
-    mode: str = "local",
-    keep_workspace: bool = False,
-) -> tuple[dict[str, Any], Path | None]:
+def execute_campaign(source: Path, task: dict[str, Any], change_set: dict[str, Any], policy: dict[str, Any], verification_commands: list[str], *, mode: str = "local", keep_workspace: bool = False) -> tuple[dict[str, Any], Path | None]:
     task = normalize_task(task)
     change_set = validate_change_set(change_set, task["task_id"])
+    max_contract_chars = int(policy.get("sandbox", {}).get("max_change_set_chars", 60000))
+    contract_chars = len(json.dumps(task, ensure_ascii=False)) + len(json.dumps(change_set, ensure_ascii=False)) + len(task["task_id"])
+    if contract_chars > max_contract_chars:
+        raise ContractError(f"combined task/change-set contract exceeds dispatch budget ({contract_chars}>{max_contract_chars})")
     issue_decision = classify_issue(task, policy)
     if not issue_decision.allowed:
         raise ContractError("task policy denied campaign: " + "; ".join(issue_decision.reasons))
@@ -183,12 +155,7 @@ def execute_campaign(
 
         success = bool(tests) and all(x["status"] == "passed" for x in tests) and not post_test_changes
         evidence = {
-            "task": {
-                "task_id": task["task_id"],
-                "source": task["source"],
-                "title": task["title"],
-                "sensitivity": task.get("sensitivity", "normal"),
-            },
+            "task": {"task_id": task["task_id"], "source": task["source"], "title": task["title"], "sensitivity": task.get("sensitivity", "normal")},
             "repository": {"full_name": task["repository"], "base_ref": task.get("base_ref", "main")},
             "change_summary": [str(change_set.get("summary") or "Agent proposed a bounded change-set")],
             "files_changed": actual,
@@ -206,17 +173,10 @@ def execute_campaign(
             "agent_confidence": change_set.get("confidence"),
             "human_judgment_required": ["Review semantic correctness and scope before merging"] + (["Sensitive path review required"] if actual_decision.requires_human_review else []),
             "artifact_links": [],
-            "measurement": {
-                "completed": success,
-                "wall_clock_seconds": round(time.monotonic() - started, 3),
-                "retry_count": int(task.get("retry_count", 0)),
-                "policy_violations": 0,
-                "sandbox_mode": mode,
-            },
+            "measurement": {"completed": success, "wall_clock_seconds": round(time.monotonic() - started, 3), "retry_count": int(task.get("retry_count", 0)), "policy_violations": 0, "sandbox_mode": mode},
             "verification_level": "RUNTIME_VERIFIED" if success else "STATICALLY_VERIFIED",
         }
-        evidence_path = temp_parent / "pr-evidence.json"
-        write_evidence(evidence_path, evidence)
+        write_evidence(temp_parent / "pr-evidence.json", evidence)
         return evidence, (temp_parent if keep_workspace else None)
     finally:
         if not keep_workspace:
@@ -233,7 +193,6 @@ def main() -> int:
     parser.add_argument("--mode", choices=["local", "docker"], default="docker")
     parser.add_argument("--evidence-out", required=True)
     args = parser.parse_args()
-
     source = Path(args.source)
     task = load_jsonish(args.task)
     change_set = load_jsonish(args.change_set)
