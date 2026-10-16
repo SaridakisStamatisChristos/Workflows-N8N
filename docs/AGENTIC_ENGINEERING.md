@@ -10,7 +10,12 @@ Authenticated Linear relay
   -> deterministic team/project/repository eligibility
   -> sensitive-domain classification
   -> normalized EngineeringTask
-  -> bounded model ChangeSet proposal
+  -> planner model
+  -> bounded implementer ChangeSet
+  -> independent adversarial review
+  -> at most one bounded repair
+  -> final adversarial review
+  -> deterministic evidence gate
   -> deterministic dispatch guard
   -> GitHub Actions isolated campaign runner
   -> ephemeral Docker workspace (network=none, no production secrets)
@@ -24,7 +29,7 @@ Authenticated Linear relay
   -> human review / merge
 ```
 
-The model does **not** receive shell access, GitHub merge authority, credential-management authority, or permission to redefine verification commands.
+No model receives shell access, GitHub merge authority, credential-management authority, permission to redefine verification commands, or authority to approve sensitive work.
 
 ## Linear intake
 
@@ -42,11 +47,13 @@ Required configuration:
 
 An issue must contain `agent:auto`. Sensitive work is escalated; blocked categories are rejected. Issue existence alone never grants mutation authority.
 
-## Bounded implementation proposal
+## Coding paths
+
+### Minimal bounded ChangeSet generator
 
 `workflows/engineering/71-change-set-generator.json`
 
-The model receives the normalized task plus repository context and may return only a bounded file operation contract:
+This is the smallest implementation-proposal surface. The model may return only a bounded file-operation contract:
 
 ```json
 {
@@ -59,7 +66,24 @@ The model receives the normalized task plus repository context and may return on
 }
 ```
 
-It cannot supply verification commands or authorize sensitive paths. The worker re-validates every proposed and actual changed path.
+It cannot supply verification commands or authorize sensitive paths.
+
+### Reviewed coding campaign
+
+`workflows/engineering/73-reviewed-coding-campaign.json`
+
+For higher-quality autonomous work, the preferred path is intentionally role-separated:
+
+1. a planner interprets the task and states constraints, expected files, tests, risks, and completion criteria;
+2. an implementer emits a bounded ChangeSet;
+3. an independent adversarial reviewer attempts to falsify the proposal;
+4. when the reviewer returns `repair`, exactly one bounded repair pass is allowed;
+5. a final adversarial reviewer either returns `accept` or `escalate`;
+6. only an accepted ChangeSet proceeds to deterministic execution.
+
+Model review is advisory evidence, never authorization. The deterministic worker still re-validates every planned and actual changed path and runs only repository-owned verification commands.
+
+`workflows/engineering/74-reviewed-campaign-orchestrator.json` connects the reviewed campaign to the fixed campaign-dispatch workflow through a deterministic evidence gate.
 
 ## Isolated execution
 
@@ -73,14 +97,16 @@ For Docker mode, verification runs with:
 - PID, memory, CPU, and wall-clock limits;
 - read-only container root filesystem;
 - a writable ephemeral workspace mount only;
-- no production credentials injected by the platform.
+- no production credentials injected by the platform;
+- a digest-pinned Python sandbox image.
 
 The automatic campaign path forcibly clears `human_review_granted`. Sensitive paths therefore cannot be made writable merely by placing a field in model/task JSON.
 
 ## Self-protection
 
-`.agent/policy.yaml` deterministically protects the guardrails themselves, including:
+`.agent/policy.yaml` deterministically protects the guardrails and publication control state, including:
 
+- `.git`, `.git/**`, `.gitignore`, `.gitattributes`, `.gitmodules`;
 - `.agent/**`;
 - `scripts/validate_workflows.py`;
 - `scripts/test_contracts.py`;
@@ -108,13 +134,13 @@ It:
 
 1. receives normalized task JSON and bounded change-set JSON;
 2. executes and verifies inside the Docker sandbox;
-3. materializes only the verified changed files back to the checked-out workspace;
+3. materializes only verified changed files back to the checked-out workspace;
 4. creates a new `agent/...` branch;
 5. pushes the branch;
 6. creates a **draft** PR;
 7. uploads the evidence artifact.
 
-It contains no merge step. The repository also has auto-merge disabled.
+It contains no merge step. Duplicate publication for the same stable task ID is rejected.
 
 `workflows/engineering/72-agent-campaign-dispatch.json` dispatches only the fixed campaign-runner endpoint in this repository and deliberately does not auto-retry an ambiguous dispatch outcome.
 
@@ -127,7 +153,8 @@ The generated `pr-evidence.json` records:
 - change summary;
 - changed files;
 - exact verification commands and results;
-- policy checks;
+- deterministic policy checks;
+- optional adversarial-review evidence;
 - known failures;
 - risk areas and sensitive paths;
 - assumptions;
@@ -163,12 +190,13 @@ python -m agentic_engineering.pilot --mode local
 python -m agentic_engineering.benchmark --mode local
 ```
 
-The CI lane additionally runs the Docker isolation pilot and uploads evidence.
+CI additionally runs the Docker isolation pilot and the repository's pinned real-n8n import/export/restart smoke.
 
 ## Known limitations
 
 - The public repository does not contain real n8n historical engineering tasks or internal reviewer/adoption data.
-- Linear API credentials and a trusted relay must be configured by the deployer; no provider credentials are committed.
+- Linear/OpenAI/GitHub credentials and a trusted Linear relay must be configured by the deployer; no provider credentials are committed.
 - The current orchestrated coding target is deliberately allowlisted to this repository. Multi-repository support should add explicit repository-specific policies rather than broadening authority.
 - The fixture benchmark is not evidence that an LLM can solve historical n8n tasks.
+- The reviewed campaign is structurally/runtime validated but still lacks credentialed end-to-end execution against a real Linear issue and real model call in deployed n8n.
 - Human reviewer acceptance, rework, and satisfaction metrics require actual reviewers and are represented as manual collection fields only.
