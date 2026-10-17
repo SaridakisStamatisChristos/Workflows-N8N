@@ -21,11 +21,11 @@ jobs:
         run: python -m compileall -q agentic_engineering tests
       - name: Unit and negative tests
         run: python -m unittest discover -s tests -p 'test_agentic_*.py' -v
-      - name: Docker isolation pilot
-        run: python -m agentic_engineering.pilot --mode docker --out artifacts/pilot-evidence.json
+      - name: Docker isolation check
+        run: python -m agentic_engineering.isolation_check --mode docker --out artifacts/isolation-evidence.json
       - name: Generate evaluation report
         run: |
-          python -m agentic_engineering.evaluate artifacts/pilot-evidence.json \
+          python -m agentic_engineering.evaluate artifacts/isolation-evidence.json \
             --json-out artifacts/evaluation-summary.json \
             --md-out artifacts/evaluation-report.md
       - name: Upload evidence
