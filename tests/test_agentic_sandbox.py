@@ -9,13 +9,13 @@ from agentic_engineering.sandbox import execute_campaign
 
 ROOT = Path(__file__).resolve().parents[1]
 POLICY = load_jsonish(ROOT / ".agent/policy.yaml")
-BENCH = load_jsonish(ROOT / "benchmarks/tasks/pilot-simple-math.yaml")
+BENCH = load_jsonish(ROOT / "benchmarks/tasks/verified-change.yaml")
 CHANGE = load_jsonish(ROOT / BENCH["fixture_change_set"])
 VERIFY = load_jsonish(ROOT / ".agent/verification.yaml")["profiles"]["fixture_python"]
 
 
 class SandboxTests(unittest.TestCase):
-    def test_local_pilot_produces_runtime_evidence(self):
+    def test_local_isolation_check_produces_runtime_evidence(self):
         evidence, _ = execute_campaign(
             ROOT / BENCH["fixture_source"],
             BENCH["task"],
