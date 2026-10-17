@@ -7,6 +7,8 @@ Run:
 ```bash
 python scripts/validate_workflows.py
 python scripts/test_contracts.py
+python -m unittest discover -s tests -p 'test_agentic_*.py' -v
+python -m agentic_engineering.benchmark --mode local
 ```
 
 The structural validator checks:
@@ -29,8 +31,30 @@ The contract suite checks:
 - Slack uses the native Slack Trigger;
 - Discord relay uses Header Auth;
 - Postgres backends preserve portable input contracts;
-- scheduled daily autonomy remains read-only;
+- scheduled daily automation remains read-only;
 - the optional deliberation workflow is review-only, uses exactly two Responses API calls, and contains no write/sub-workflow dispatch nodes.
+
+## Engineering isolation and benchmark controls
+
+Run the reproducible isolation check locally:
+
+```bash
+python -m agentic_engineering.isolation_check --mode local
+```
+
+Run the same execution boundary inside Docker:
+
+```bash
+python -m agentic_engineering.isolation_check --mode docker
+```
+
+Run the simulated control corpus:
+
+```bash
+python -m agentic_engineering.benchmark --mode local
+```
+
+The three reference controls assert a successful verified change, deterministic policy rejection of a forbidden path, and verification rejection of an incorrect implementation. They validate the execution and safety pipeline; they are not autonomous coding-quality evidence.
 
 ## Live import/boot test
 

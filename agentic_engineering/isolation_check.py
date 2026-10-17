@@ -13,12 +13,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the reproducible agentic engineering fixture pilot")
+    parser = argparse.ArgumentParser(description="Run the reproducible agentic engineering isolation check")
     parser.add_argument("--mode", choices=["local", "docker"], default="local")
-    parser.add_argument("--out", default="artifacts/pilot-evidence.json")
+    parser.add_argument("--out", default="artifacts/isolation-evidence.json")
     args = parser.parse_args()
 
-    benchmark = load_jsonish(ROOT / "benchmarks/tasks/pilot-simple-math.yaml")
+    benchmark = load_jsonish(ROOT / "benchmarks/tasks/verified-change.yaml")
     task = benchmark["task"]
     change_set = load_jsonish(ROOT / benchmark["fixture_change_set"])
     policy = load_jsonish(ROOT / ".agent/policy.yaml")

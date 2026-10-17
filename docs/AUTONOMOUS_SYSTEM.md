@@ -1,4 +1,4 @@
-# Elite Autonomous n8n System v3
+# Autonomous n8n Control Plane
 
 ## Control plane
 
@@ -58,7 +58,7 @@ Discord requires a small upstream interaction/message relay because n8n currentl
 
 All operator surfaces converge on the same command-center contract.
 
-## Scheduled autonomy
+## Scheduled automation
 
 `70-daily-autonomous-brief.json` runs a read-only daily brief through the command center. It deliberately omits an action envelope, so it cannot mutate external systems.
 

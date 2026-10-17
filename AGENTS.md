@@ -27,16 +27,16 @@ This repository is an agentic-engineering platform, so agents must preserve the 
 python scripts/validate_workflows.py
 python scripts/test_contracts.py
 python -m unittest discover -s tests -p 'test_agentic_*.py' -v
-python -m agentic_engineering.pilot --mode local
+python -m agentic_engineering.isolation_check --mode local
 ```
 
-For the isolation proof, use Docker:
+For the Docker isolation check:
 
 ```bash
-python -m agentic_engineering.pilot --mode docker
+python -m agentic_engineering.isolation_check --mode docker
 ```
 
-The Docker pilot uses no network and deliberately carries no production credentials.
+The Docker check uses no network and deliberately carries no production credentials.
 
 ## Evidence discipline
 

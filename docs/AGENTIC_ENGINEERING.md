@@ -1,6 +1,6 @@
-# Agentic Engineering Platform
+# Agentic Engineering Automation
 
-This layer extends the existing autonomous n8n system into a safety-first engineering workflow for selected software tasks.
+This optional layer extends the n8n automation system with a safety-first engineering workflow for selected software tasks. It is deliberately bounded: model output proposes file operations, while deterministic repository policy owns execution, verification, and publication gates.
 
 ## End-to-end architecture
 
@@ -73,7 +73,7 @@ Model-review conclusions are preserved as advisory evidence, not as permission.
 
 ## Isolated execution
 
-`agentic_engineering/sandbox.py` implements the execution boundary.
+`agentic_engineering/sandbox.py` implements the execution boundary. `agentic_engineering/isolation_check.py` provides a reproducible control that exercises that boundary against the reference fixture.
 
 For Docker mode, verification runs with:
 
@@ -129,7 +129,7 @@ It contains no merge step. The repository also has auto-merge disabled.
 
 `workflows/engineering/72-agent-campaign-dispatch.json` dispatches only the fixed campaign-runner endpoint in this repository and deliberately does not auto-retry an ambiguous dispatch outcome.
 
-## PR evidence
+## Evidence
 
 The generated `pr-evidence.json` records:
 
@@ -148,19 +148,21 @@ The generated `pr-evidence.json` records:
 - wall-clock/retry/policy metrics;
 - verification level.
 
-The rendered PR body intentionally contains conclusions and evidence, not private chain-of-thought.
+The rendered PR body contains conclusions and evidence, not private chain-of-thought.
 
-## Evaluation lab
+## Evaluation controls
 
 `benchmarks/tasks/*.yaml` contains JSON-compatible YAML task specifications so the harness remains dependency-free.
 
-`python -m agentic_engineering.benchmark --mode docker` executes the corpus and checks expected outcomes.
+```bash
+python -m agentic_engineering.benchmark --mode local
+```
 
-The initial corpus contains three **SIMULATED** fixture controls:
+The reference corpus contains three **SIMULATED** controls:
 
-1. a valid code fix that must pass verification;
-2. a forbidden test mutation that policy must reject;
-3. an allowed but incorrect change that verification must block.
+1. `verified-change` — a valid code fix that must pass verification;
+2. `policy-rejection` — a forbidden test mutation that policy must reject;
+3. `verification-rejection` — an allowed but incorrect change that verification must block.
 
 The fixture change-sets are canned, so `quality_benchmark_task_count` is explicitly `0`. These tasks measure pipeline and safety mechanics, **not autonomous coding quality**. Real historical tasks can be added later without changing the runner contract.
 
@@ -170,16 +172,16 @@ The fixture change-sets are canned, so `quality_benchmark_task_count` is explici
 
 ```bash
 python -m unittest discover -s tests -p 'test_agentic_*.py' -v
-python -m agentic_engineering.pilot --mode local
+python -m agentic_engineering.isolation_check --mode local
 python -m agentic_engineering.benchmark --mode local
 ```
 
-The CI lane additionally runs the Docker isolation pilot and uploads evidence.
+The CI lane additionally runs the Docker isolation check and uploads the resulting evidence.
 
 ## Known limitations
 
-- The public repository does not contain real n8n historical engineering tasks or internal reviewer/adoption data.
+- The repository does not contain real production engineering-task history or internal reviewer/adoption data.
 - Linear API credentials and a trusted relay must be configured by the deployer; no provider credentials are committed.
 - The current orchestrated coding target is deliberately allowlisted to this repository. Multi-repository support should add explicit repository-specific policies rather than broadening authority.
-- The fixture benchmark is not evidence that an LLM can solve historical n8n tasks.
+- The simulated fixture benchmark is not evidence that an LLM can solve historical engineering tasks.
 - Human reviewer acceptance, rework, and satisfaction metrics require actual reviewers and are represented as manual collection fields only.
